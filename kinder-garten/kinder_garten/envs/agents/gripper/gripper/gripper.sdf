@@ -1,0 +1,319 @@
+<?xml version="1.0"?>
+<sdf version='1.6'>
+  <world name='default'>
+    <model name='HS_Gripper'>
+      <pose frame=''>0 0 0.7 0 0 0</pose>
+      <selfCollide>true</selfCollide>
+      <link name='world'></link>
+      <joint name='x_axis' type='prismatic'>
+        <parent>world</parent>
+        <child>x_link</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <limit>
+            <lower>-10</lower>
+            <upper>10</upper>
+            <effort>1</effort>
+            <velocity>1</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+
+      <link name='x_link'>
+        <pose frame=''>0 0 0 0 0 0</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <joint name='y_axis' type='prismatic'>
+        <parent>x_link</parent>
+        <child>y_link</child>
+        <axis>
+          <xyz>0 1 0</xyz>
+          <limit>
+            <lower>-10</lower>
+            <upper>10</upper>
+            <!-- <lower>-0.5</lower>
+          <upper>0.5</upper> -->
+            <effort>1</effort>
+            <velocity>1</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+
+      <link name='y_link'>
+        <pose frame=''>0 0 0 0 0 0</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <joint name='z_axis' type='prismatic'>
+        <parent>y_link</parent>
+        <child>z_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <!-- <lower>-0.3</lower>
+          <upper>0.3</upper> -->
+            <lower>-10</lower>
+            <upper>10</upper>
+            <effort>1</effort>
+            <velocity>1</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+
+      <link name='z_link'>
+        <pose frame=''>0 0 0 0 0 0</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <joint name='base_joint' type='revolute'>
+        <parent>z_link</parent>
+        <child>base_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <!-- <lower>-0.5</lower>
+          <upper>10</upper> -->
+            <lower>-3.14</lower>
+            <upper>3.14</upper>
+            <effort>1</effort>
+            <velocity>1</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+
+      <link name="base_link">
+        <pose frame=''>0 0 0 0 0 0</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+        <visual name='base_link_visual'>
+          <!-- <origin rpy="0 0 0" xyz="0 0 0" /> -->
+
+          <geometry>
+            <!-- <mesh uri="mm_stl/Body1.stl" scale="0.001 0.001 0.001" /> -->
+            <mesh>
+              <scale>0.001 0.001 0.001</scale>
+              <uri>mm_stl/Body1.stl</uri>
+            </mesh>
+          </geometry>
+          <!-- <material name="silver">
+            <color rgba="1 0 0 1" />
+          </material> -->
+        </visual>
+        <!-- <collision>
+          <origin rpy="0 0 0" xyz="0 0 0" />
+          <geometry>
+            <mesh uri="mm_stl/Body1.stl" scale="0.001 0.001 0.001" />
+          </geometry>
+        </collision> -->
+
+      </link>
+
+      <link name='component_a'>
+        <pose frame=''>0.01793 -0.01 -4.3e-05</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+        <visual name='component_a_visual'>
+          <pose frame=''>-0.01793 0.01 4.3e-05 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.001 0.001 0.001</scale>
+              <uri>mm_stl/13.stl</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name='component_a_collision'>
+          <pose frame=''>-0.01793 0.01 4.3e-05 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.001 0.001 0.001</scale>
+              <uri>mm_stl/13.stl</uri>
+            </mesh>
+          </geometry>
+        </collision>
+      </link>
+
+      <link name='component_b'>
+        <pose frame=''>-0.017999 0.01 -1e-06</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+        <visual name='Component11_visual'>
+          <pose frame=''>0.017999 -0.01 1e-06 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.001 0.001 0.001</scale>
+              <uri>mm_stl/11.stl</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name='component_b_collision'>
+          <pose frame=''>0.017999 -0.01 1e-06 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.001 0.001 0.001</scale>
+              <uri>mm_stl/11.stl</uri>
+            </mesh>
+          </geometry>
+        </collision>
+      </link>
+
+      <!-- <link name='component_a'>
+        <pose frame=''>0 0 0 0 0 0</pose>
+        <inertial>
+          <pose frame=''>0 0 0 0 0 0</pose>
+          <mass>1.2</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+      </link> -->
+
+      <!-- <joint name='Rev10' type='revolute'>
+        <child> component_a </child>
+        <parent> base_link </parent>
+        <axis xyz="0.0 -0.01 0.0" />
+        <axis>
+          <xyz>0 -0.01 0</xyz>
+          <limit>
+            <lower>-0.6</lower>
+            <upper>0.3</upper>
+            <velocity>1</velocity>
+          </limit>
+        </axis>
+      </joint> -->
+
+      <joint name='Rev10' type='revolute'>
+        <parent>base_link</parent>
+        <child>component_a</child>
+        <axis>
+          <xyz>0 1 0</xyz>
+          <limit>
+            <lower>-0.6</lower>
+            <upper>0.3</upper>
+            <effort>1</effort>
+            <velocity>1</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+
+      <joint name='Rev11' type='revolute'>
+        <parent>base_link</parent>
+        <child>component_b</child>
+        <axis>
+          <xyz>0 1 0</xyz>
+          <limit>
+            <lower>-0.3</lower>
+            <upper>0.6</upper>
+            <effort>1</effort>
+            <velocity>1</velocity>
+          </limit>
+          <dynamics>
+            <damping>0</damping>
+            <friction>0</friction>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+
+    </model>
+  </world>
+</sdf>

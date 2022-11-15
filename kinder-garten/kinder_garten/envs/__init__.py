@@ -1,1 +1,1 @@
-from kinder_garten.envs.kinder_garten import GridWorldEnv
+from kinder_garten.envs.kinder_garten import KinderGarten

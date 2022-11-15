@@ -1,0 +1,96 @@
+<?xml version="1.0" ?>
+<robot name="(Unsaved)">
+<link name="base_link">
+  <inertial>
+    <origin rpy="0 0 0" xyz="-0.000259 0.0 0.024405"/>
+    <mass value="1.302503"/>
+    <inertia ixx="0.000609" ixy="0.0" ixz="-8e-06" iyy="0.00204" iyz="8e-06" izz="0.001518"/>
+  </inertial>
+  <visual>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <geometry>
+      <mesh filename="package:///home/yo/Desktop/Desarrollo/HSSimulacion/CAD_STL_files/grip/mm_stl/Body1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver">
+      <color rgba="1 0 0 1"/>
+    </material>
+  </visual>
+  <collision>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <geometry>
+      <mesh filename="package:///home/yo/Desktop/Desarrollo/HSSimulacion/CAD_STL_files/grip/mm_stl/Body1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component13_1">
+  <inertial>
+    <origin rpy="0 0 0" xyz="0.018879 0.01 -0.038259"/>
+    <mass value="0.49897"/>
+    <inertia ixx="0.000583" ixy="0.0" ixz="-0.000703" iyy="0.000613" iyz="0.000723" izz="6.3e-05"/>
+  </inertial>
+  <visual>
+    <origin rpy="0 0 0" xyz="-0.01793 0.01 4.3e-05"/>
+    <geometry>
+      <mesh filename="package:///home/yo/Desktop/Desarrollo/HSSimulacion/CAD_STL_files/grip/mm_stl/13.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver">
+      <color rgba="1 0 0 1"/>
+    </material>
+  </visual>
+  <collision>
+    <origin rpy="0 0 0" xyz="-0.01793 0.01 4.3e-05"/>
+    <geometry>
+      <mesh filename="package:///home/yo/Desktop/Desarrollo/HSSimulacion/CAD_STL_files/grip/mm_stl/13.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Component11_1">
+  <inertial>
+    <origin rpy="0 0 0" xyz="-0.018879 -0.01 -0.038259"/>
+    <mass value="0.49897"/>
+    <inertia ixx="0.000583" ixy="0.0" ixz="0.000704" iyy="0.000613" iyz="-0.000724" izz="6.3e-05"/>
+  </inertial>
+  <visual>
+    <origin rpy="0 0 0" xyz="0.017999 -0.01 1e-06"/>
+    <geometry>
+      <mesh filename="package:///home/yo/Desktop/Desarrollo/HSSimulacion/CAD_STL_files/grip/mm_stl/11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver">
+      <color rgba="1 0 0 1"/>
+    </material>
+  </visual>
+  <collision>
+    <origin rpy="0 0 0" xyz="0.017999 -0.01 1e-06"/>
+    <geometry>
+      <mesh filename="package:///home/yo/Desktop/Desarrollo/HSSimulacion/CAD_STL_files/grip/mm_stl/11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Rev10" type="continuous">
+  <origin rpy="0 0 0" xyz="0.01793 -0.01 -4.3e-05"/>
+  <parent link="base_link"/>
+  <child link="Component13_1"/>
+  <axis xyz="0.0 -0.01 0.0"/>
+  <limit>
+    <lower>-0.6</lower>
+    <upper>0.3</upper>
+    <velocity>1</velocity>
+  </limit>
+</joint>
+
+
+<joint name="Rev11" type="continuous">
+  <origin rpy="0 0 0" xyz="-0.017999 0.01 -1e-06"/>
+  <parent link="base_link"/>
+  <child link="Component11_1"/>
+  <axis xyz="0.0 -0.01 0.0"/>
+  <limit>
+    <lower>-0.6</lower>
+    <upper>0.3</upper>
+    <velocity>1</velocity>
+  </limit>
+</joint>
+</robot>
