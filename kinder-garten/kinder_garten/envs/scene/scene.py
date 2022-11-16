@@ -2,6 +2,8 @@ import pybullet as p
 import logging
 import os
 import random
+import numpy  as np
+from kinder_garten.envs.agents.gripper  import Bullet
 
 # logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
 #                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -44,6 +46,10 @@ class Scene:
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
+    def get_pose(self, id):
+        pos, orn = p.getBasePositionAndOrientation(id)
+        return (pos, orn)
+
     def loadPyBullet(self, object):
         self.spawners = []
         if 'file' in object:
@@ -55,11 +61,107 @@ class Scene:
             else:
                 # id = p.loadURDF(file, physicsClientId=self.clientId)
                 id = p.loadURDF(file)
+            if 'detect_surface' in object and object['detect_surface']:
+                self.detect_surface(id)
+            
         if 'dir' in object:
             spawner = SpawSquare(object)
             spawner.spawn()
             self.spawners.append(spawner)
         
+    def detect_surface(self, obj_id):
+        pos, _ = self.get_pose(obj_id)
+        x = pos[0]
+        y = pos[1]
+        z = pos[2]
+
+        rayFrom = (x, y, z+1)
+        rayTo = (x, y, z-1)
+        rayInfo = p.rayTest(rayFrom, rayTo)
+        hit = rayInfo[0][3]
+        z = hit[2]
+
+        p.addUserDebugLine(rayFrom, rayTo, [1, 0, 0], 3)
+        print(f'{rayInfo} len: {len(rayInfo)}')
+        p.addUserDebugPoints([hit], [[0, 1, 1]], pointSize=10)
+
+        xs = iter(np.linspace(-1, 1, 30))
+        ys = iter(np.linspace(-1, 1, 30))
+
+
+        rays_from = []
+        rays_to = []
+        table_planes = []
+        logging.info('generating points')
+        for x in np.linspace(-1, 1, 10000):
+            for y in np.linspace(-1, 1, 10000):
+                rayFrom = (x, y, z+0.1)
+                rayTo = (x, y, z-0.1)
+                rays_from.append(rayFrom)
+                rays_to.append(rayTo)
+                # rayInfo = p.rayTest(rayFrom, rayTo)
+                # p.addUserDebugLine(rayFrom,rayTo,[1,0,0],3)
+                # print(f'{rayInfo} len: {len(rayInfo)}')
+                
+                # hit = rayInfo[0]
+                # objectUid = hit[0]
+                # if (objectUid == obj_id):
+                #     p.addUserDebugPoints(
+                #         [rayFrom], [[0, 0, 1]], pointSize=5)
+
+                #     pos_table = hit[3]
+                #     table_planes.append(pos_table)
+                # else:
+                #     p.addUserDebugPoints(
+                #         [rayFrom], [[0, 1, 0]], pointSize=5)
+
+        logging.info('ray request')
+
+        batch = p.rayTestBatch(rays_from, rays_to)
+        print(batch)
+        points = []
+
+        logging.info('analyzing data points')
+        for data in batch:
+            objectUid = data[0]
+            if (objectUid == obj_id):
+
+                pos_table = data[3]
+
+                table_planes.append(pos_table)
+
+        print(len(table_planes))
+        print(len([[0, 0, 1]]*len(table_planes)))
+        print([[0, 0, 1]]*len(table_planes))
+
+        logging.info('painting points')
+        p.addUserDebugPoints(
+            table_planes, [[0, 0, 1]]*len(table_planes), pointSize=5)
+
+        x_min= 10000
+        y_min = 10000
+        x_max= -10000
+        y_max = -10000
+        for point in table_planes:
+            x, y, _ = point
+            x_min = x if x < x_min else x_min
+            y_min = y if y < y_min else y_min
+            x_max = x if x > x_max else x_max
+            y_max = y if y > y_max else y_max
+
+        p.addUserDebugPoints(
+            [[x_min, y_min, z]], [[0, 0, 0]], pointSize=10)
+        p.addUserDebugPoints(
+            [[x_min, y_max, z]], [[0, 0, 0]], pointSize=10)
+        p.addUserDebugPoints(
+            [[x_max, y_min, z]], [[0, 0, 0]], pointSize=10)
+        p.addUserDebugPoints(
+            [[x_max, y_max, z]], [[0, 0, 0]], pointSize=10)
+            
+
+        
+
+
 
 
     def resetPyBullet(self):
