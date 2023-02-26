@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 import logging
 
+from pathlib import Path
+
 # logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
 #                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
 #                     datefmt='%Y-%m-%d:%H:%M:%S')
@@ -28,7 +30,8 @@ class ActionStateSpaces:
 class Bullet():
     def __init__(self, physicsClient) -> None:
         self.physicsClient = physicsClient
-        path = '/home/yo/Desktop/Desarrollo/TFG/kinder-garten/kinder_garten/envs/agents/gripper/gripper/gripper.sdf'
+        path = str(Path(__file__).parent/'gripper/gripper.sdf')
+        print(path)
         path2 = 'kinder_garten/envs/agents/gripper/gripper_a/gripper.sdf'
         self.load_agent_pybullet(path)
 
