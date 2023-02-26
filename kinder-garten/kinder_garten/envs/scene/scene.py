@@ -4,6 +4,7 @@ import os
 import random
 import numpy  as np
 from kinder_garten.envs.agents.gripper  import Bullet
+import math
 
 # logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
 #                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -25,16 +26,19 @@ class Scene:
     def __init__(self, engine, scene, clientId) -> None:
         
         self.clientId = clientId
-        if engine is 'pybullet':
+        if engine == 'pybullet':
             self.initPyBullet()
             self.load = self.loadPyBullet
             self.reset = self.resetPyBullet
 
-        if scene is 'simple':
+        if scene == 'simple':
             from kinder_garten.envs.scene.simple import objects_to_load
             self.objects_to_load = objects_to_load
-        elif scene is 'table':
+        elif scene == 'table':
             from kinder_garten.envs.scene.mesa import objects_to_load
+            self.objects_to_load = objects_to_load
+        elif scene == 'editor':
+            from kinder_garten.envs.scene.simple import objects_to_load
             self.objects_to_load = objects_to_load
 
         for object in objects_to_load:
@@ -93,8 +97,9 @@ class Scene:
         rays_to = []
         table_planes = []
         logging.info('generating points')
-        for x in np.linspace(-1, 1, 10000):
-            for y in np.linspace(-1, 1, 10000):
+        # TODO do surface generation space accorging object
+        for x in np.linspace(-1, 1, 100):
+            for y in np.linspace(-1, 1, 100):
                 rayFrom = (x, y, z+0.1)
                 rayTo = (x, y, z-0.1)
                 rays_from.append(rayFrom)
@@ -118,8 +123,7 @@ class Scene:
         logging.info('ray request')
 
         batch = p.rayTestBatch(rays_from, rays_to)
-        print(batch)
-        points = []
+        # print(batch)
 
         logging.info('analyzing data points')
         for data in batch:
@@ -130,9 +134,9 @@ class Scene:
 
                 table_planes.append(pos_table)
 
-        print(len(table_planes))
-        print(len([[0, 0, 1]]*len(table_planes)))
-        print([[0, 0, 1]]*len(table_planes))
+        # print(len(table_planes))
+        # print(len([[0, 0, 1]]*len(table_planes)))
+        # print([[0, 0, 1]]*len(table_planes))
 
         logging.info('painting points')
         p.addUserDebugPoints(
@@ -160,8 +164,16 @@ class Scene:
             
 
         
-
-
+    def form_rectangle(self, pts):
+        # find one of the corners
+        for i in range(len(pts)):
+            pt1 = pts[1]
+            for j in range(i, len(pts)):
+                pt2 = pts[j]
+                x1, y1 = pt1
+                x2, y2 = pt2
+                slope = (y2-y1)/(x2-x1)
+                print(f'{pt1} {pt2} m:{slope}')
 
 
     def resetPyBullet(self):
@@ -178,6 +190,68 @@ class Scene:
     def isDone(self):
         return False
 
+    def update_from_editor(self, canvas):
+        # vamos a coger los datos y dibujarlos
+        # create aux list for proceced lines so we dont over draw
+
+        # Lines which represent walls
+        for line in canvas.lines:
+            p1 = list(line[0])
+            p2 = list(line[1])
+            # add z dimension
+            z = 200
+
+            p1.append(z)
+            p2.append(z)
+
+            scale = 0.01
+
+            p1 = np.array(p1) * scale
+            p2 = np.array(p2) * scale
+
+            mid_point = (p1+p2)/2
+
+            vector = p1-p2
+
+            angle = math.degrees(math.atan(vector[1]/vector[0]))
+
+            if 90.0 == abs(angle):
+                orientation = p.getQuaternionFromEuler([1.57, 0, 1.57])
+            else:
+                orientation = p.getQuaternionFromEuler([1.57, 0, 0])
+
+            print(f'----- {angle}')
+            magnitude = np.sqrt(vector.dot(vector))
+            # magnitude *= 0.5
+
+            mid_point[2] = 0.5
+            
+            # middle of the plane in between the 2 planes
+            # plane1x1 = "kinder-garten/kinder_garten/envs/scene/objects/plane/plane_1x1.urdf"
+            # id = p.loadURDF(plane1x1, basePosition=mid_point, baseOrientation=orientation, globalScaling=magnitude)
+            meshScale = [1*magnitude, 1, 3]
+            shift = [0, -0.02, 0]
+            visualShapeId = p.createVisualShape(shapeType=p.GEOM_MESH,
+                                    fileName="objects/plane/a.obj",
+                                    rgbaColor=[1, 0, 0, 1],
+                                    specularColor=[0.4, .4, 0],
+                                    visualFramePosition=shift,
+                                    meshScale=meshScale)
+
+            # TODO add collision shape
+
+            p.createMultiBody(baseMass=0,
+                      baseInertialFramePosition=[0, 0, 0],
+                    #   baseCollisionShapeIndex=collisionShapeId,
+                      baseVisualShapeIndex=visualShapeId,
+                      baseOrientation=orientation,
+                      basePosition=mid_point,
+                      useMaximalCoordinates=True)
+
+            # print(f'drawing lines {p1} {p2}')
+            p.addUserDebugLine(p1, p2, lineColorRGB=[1,1,0], lineWidth=5)
+
+        # TODO add spawning area processing
 
 class SpawSquare:
     def __init__(self, obj, debug=True) -> None:

@@ -5,6 +5,8 @@ import numpy as np
 from kinder_garten.envs.scene import scene
 from kinder_garten.envs.agents import gripper
 
+from kinder_garten.GUI.utils import root, canvas
+
 import pybullet as p
 
 
@@ -54,16 +56,20 @@ class KinderGarten(gym.Env):
         # which will be passed to the agent
         # which will be passed to the rewards
 
-        if scene_name is 'simple':
+        self.scene_editor = False
+        if scene_name == 'simple':
             self.scene = scene.Scene(self.engine, scene_name,  self.physicsClient)
-        elif scene_name is 'table':
+        elif scene_name == 'table':
+            self.scene = scene.Scene(self.engine, scene_name,  self.physicsClient)
+        elif scene_name == 'editor':
+            self.scene_editor = True
             self.scene = scene.Scene(self.engine, scene_name,  self.physicsClient)
         else:
             # TODO crear función que verifique objeto scene custom
             pass
         
 
-        if agent is 'gripper':
+        if agent == 'gripper':
             self.agent = gripper.Gripper(self.engine, self.physicsClient, self.reward)
         else:
             # load custom class that expects certain format?
@@ -87,6 +93,13 @@ class KinderGarten(gym.Env):
         # return observation, info
 
     def step(self, action):
+
+        root.update_idletasks()
+        root.update()
+
+        if self.scene_editor:
+            self.scene.update_from_editor(canvas)
+
         self.agent.step(action)
         # logging.info(self.agent.get_pose())
         
@@ -100,7 +113,7 @@ class KinderGarten(gym.Env):
         info = None
 
         btn_val = p.readUserDebugParameter(self.reset_btn)
-        logging.debug(btn_val)
+        # logging.debug(btn_val)
         if self.prev_reset_btn < btn_val:
             # logging.debug(
             #     f"Resetting scene  ({self.prev_reset_btn} < {btn_val})")
