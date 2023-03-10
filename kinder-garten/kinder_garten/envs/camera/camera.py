@@ -86,13 +86,14 @@ class PyBulletCamera():
     init()
     set
     """
-    def __init__(self, agent, width, height, K, near=0.02, far=2.0) -> None:
+    def __init__(self, agent, width, height, K, near=0.02, far=2.0, debug=False) -> None:
         self.width = width
         self.height = height
         self._near = near
         self._far = far
         self.view_matrix = None
         self.agent = agent
+        self.debug = debug
         # K = np.array(
         #     [[69.76, 0.0, 32.19], [0.0, 77.25, 32.0], [0.0, 0.0, 1.0]])
 
@@ -186,12 +187,15 @@ class PyBulletCamera():
             cam_pos = cam_matrix[:3, 3]
         
             # logging.debug(f'pos {cam_pos} rot {cam_matrix[:3, 2]}')
-            p.addUserDebugPoints([cam_pos], [[0.1, 0, 0]], pointSize=3, lifeTime=0.1)
+            
             lineFrom = cam_pos.tolist()
             lineFrom = [round(point,3) for point in lineFrom]
             lineTo = lineFrom + lineFrom*cam_matrix[:3, 2]
             # logging.debug(f'vec from {lineFrom} to {lineTo}')
-            p.addUserDebugLine(lineFrom, lineTo, lifeTime=0.1)
+            if self.debug:
+                p.addUserDebugPoints([cam_pos], [[0.1, 0, 0]],
+                                    pointSize=3, lifeTime=0.1)
+                p.addUserDebugLine(lineFrom, lineTo, lifeTime=0.1)
 
 
         # https://computergraphics.stackexchange.com/questions/5571/why-do-i-need-to-inverse-the-orientation-matrix-of-a-camera-to-be-able-to-transl

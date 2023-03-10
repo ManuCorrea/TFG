@@ -1,3 +1,4 @@
+from enum import Enum
 from kinder_garten.envs.camera.camera import PyBulletCamera
 import pybullet as p
 import gym
@@ -12,6 +13,10 @@ from dataclasses import dataclass
 import logging
 
 from pathlib import Path
+
+
+from kinder_garten.envs.agents.rewards import Reward, SimplifiedReward, ShapedCustomReward
+
 
 # logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
 #                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -31,9 +36,9 @@ class Bullet():
     def __init__(self, physicsClient) -> None:
         self.physicsClient = physicsClient
         path = str(Path(__file__).parent/'gripper/gripper.sdf')
-        print(path)
-        path2 = 'kinder_garten/envs/agents/gripper/gripper_a/gripper.sdf'
-        self.load_agent_pybullet(path)
+        logging.info(f'loading model from {path}')
+        self.load_agent_pybullet(path, start_pos=[0,0,0.8])
+        self._time_step = 1. / 240.
 
         if 1:
             p.setRealTimeSimulation(1)
@@ -43,6 +48,27 @@ class Bullet():
         pos, orn, _, _, _, _ = p.getLinkState(self.agent_id, 3)
         return (pos, orn)
 
+    def get_link(self, id):
+        pos, orn, _, _, _, _ = p.getLinkState(self.agent_id, id)
+        return (pos, orn)
+
+    def get_joint(self, id):
+        joint_state = p.getJointState(
+            self.agent_id, id)
+        return joint_state[0]
+
+    def set_position(self, joint_id, position, max_force=100.):
+        # print(f'Setting {joint_id} to {position}')
+        p.setJointMotorControl2(
+            self.agent_id, joint_id,
+            controlMode=p.POSITION_CONTROL,
+            targetPosition=position,
+            force=max_force)
+
+    def step_simulator(self, duration):
+        for _ in range(int(duration / self._time_step)):
+            p.stepSimulation()
+
     def load_agent_pybullet(self, path, start_pos=[0, 0, 1],
                             start_orn=[0, 0, 0, 1.], scaling=1., static=False):
         self.start_pos = start_pos
@@ -51,6 +77,8 @@ class Bullet():
         if path.endswith('.sdf'):
             self.agent_id = p.loadSDF(
                 path, globalScaling=scaling, physicsClientId=self.physicsClient)[0]
+            p.changeDynamics(self.agent_id, 4, lateralFriction=10)
+            p.changeDynamics(self.agent_id, 5, lateralFriction=10)
             p.resetBasePositionAndOrientation(
                 self.agent_id, start_pos, start_orn, physicsClientId=self.physicsClient)
         else:
@@ -65,13 +93,16 @@ class Bullet():
         logging.debug(f"Resetting with pos: {self.start_pos} and orn {self.start_orn}")
         # p.resetBasePositionAndOrientation(
         #     self.agent_id, self.start_pos, self.start_orn, physicsClientId=self.physicsClient)
-        # for i in range(self.joints):
-        #     p.setJointMotorControlArray(self.agent_id,
-        #                                 jointIndices=self.joint_indices,
-        #                                 controlMode=p.POSITION_CONTROL,
-        #                                 targetPositions=[0] * self.joints,
-        #                                 forces=self.forces)
+        for i in range(self.joints):
+            p.setJointMotorControlArray(self.agent_id,
+                                        jointIndices=self.joint_indices,
+                                        controlMode=p.POSITION_CONTROL,
+                                        targetPositions=[0] * self.joints,
+                                        forces=self.forces)
 
+
+        p.resetBasePositionAndOrientation(
+            self.agent_id, self.start_pos, self.start_orn, physicsClientId=self.physicsClient)
         for idx in self.joint_indices:
             p.resetJointState(self.agent_id, idx, 0)
         
@@ -117,8 +148,13 @@ class Bullet():
 class Gripper:
 
     # config max_translation
+    class Status(Enum):
+        RUNNING = 0
+        SUCCESS = 1
+        FAIL = 2
+        TIME_LIMIT = 3
 
-    def __init__(self, engine, physicsClient, reward, simplified=False, discrete=False, debug=True) -> None:
+    def __init__(self, engine, physicsClient, reward, simplified=False, discrete=False, debug=False) -> None:
         self.grippersPartsId = (4, 5)
 
         self._max_translation = 0.01
@@ -131,26 +167,81 @@ class Gripper:
 
         self.debug = debug
 
+        self.width = 224
+        self.height = 171
         if engine == 'pybullet':
             # self.camera = camera.PyBulletCamera()
             self.physicsClient = physicsClient
             self.ops = Bullet(self.physicsClient)
-            self.camera = PyBulletCamera(self, 224, 171, K=None)
+            self.camera = PyBulletCamera(self, self.width, self.height, K=None)
 
             if self.debug:
                 self.ops.init_debug()      
 
+        self._reward_fn = Reward(None, self)
+
         self._simplified = simplified
 
-        self.action_space()
+        self._gripper_open = True
+        self.endEffectorAngle = 0.
+
+        print(f'---------------  eje  z: {self.ops.get_link(2)[0][2]}')
+        print(f'---------------  base: {self.ops.get_link(3)[0]}')
+        # TODO double check
+        self._initial_height = self.ops.get_link(2)[0][2]
+
+        # TODO documentar
+        self.main_joints =  [0, 1, 2, 3]
+
+        # TODO get sure about this value
+        self._target_joint_pos = None
+
+        self.episode_step = 0
+        self.time_horizon = 150
+        self.episode_rewards = np.zeros(self.time_horizon)
+
+        self.setup_spaces()
 
     def get_pose(self):
         return self.ops.get_pose()
 
+    def get_link(self, id):
+        return self.ops.get_link(id)
+
+    def get_joint(self, id):
+        return self.ops.get_joint(id)
+
     def reset(self):
+        self._gripper_open = True
+        self._target_joint_pos = None
+        self.endEffectorAngle = 0.
+        self.episode_step = 0
+        self.time_horizon = 150
+        self.episode_rewards = np.zeros(self.time_horizon)
+
         self.ops.reset()
 
-    def normal_space(self):
+    def set_position(self, joint_id, position, max_force=100.):
+        self.ops.set_position(joint_id, position, max_force)
+
+    def step_simulator(self, duration):
+        # duration /= 10
+        self.ops.step_simulator(duration)
+        
+    def setup_spaces(self):
+        self.set_action_space()
+
+        shape = self.camera.width, self.camera.height
+        self.full_obs = False
+        if self.full_obs:  # RGB + Depth + Actuator
+            self.observation_space = gym.spaces.Box(low=0, high=255,
+                                                    shape=(shape[0], shape[1], 5))
+        else:  # Depth + Actuator obs
+            self.observation_space = gym.spaces.Box(low=0, high=255,
+                                                    shape=(shape[0], shape[1], 2))
+
+
+    def set_action_space(self):
         if self._discrete:
 
             # [no, -x, +x, -y, +y, -z, +z, -yaw, +yaw, open, close]
@@ -169,26 +260,14 @@ class Gripper:
 
             self.action_space = gym.spaces.Box(-1.,
                                                1., shape=(5,), dtype=np.float32)
+            logging.info("gym.spaces.Box(-1., 1., shape=(5,), dtype=np.float32)")
+        
         self._act = self._full_act
 
         if self._include_robot_height:
             self._obs_scaler = np.array([1. / 0.05, 1.])
-            self.state_space = gym.spaces.Box(
-                0., 1., shape=(2,), dtype=np.float32)
         else:
             self._obs_scaler = 1. / 0.1
-            self.state_space = gym.spaces.Box(
-                0., 1., shape=(1,), dtype=np.float32)
-
-    def action_space(self):
-        # Discrete [0, n+1]
-        # Box n dimensional spaces of continuous space
-        if self._simplified:
-            self.simplified_action_space()
-        else:
-            self.normal_space()
-        
-        return self.action_space
 
     # TODO check if its really necesary
     def _clip_translation_vector(self, translation, yaw):
@@ -196,11 +275,17 @@ class Gripper:
         length = np.linalg.norm(translation)
         if length > self._max_translation:
             translation *= self._max_translation / length
-        yaw = self._max_yaw_rotation if yaw > self._max_yaw_rotation else yaw
+        if yaw > self._max_yaw_rotation:
+            yaw = self._max_yaw_rotation
+        elif yaw < -self._max_yaw_rotation:
+            yaw = -self._max_yaw_rotation
+        else:
+            yaw = yaw
 
         return translation, yaw
 
     def _full_act(self, action):
+        # logging.info(action)
         if not self._discrete:
             # Parse the action vector
             translation, yaw_rotation = self._clip_translation_vector(
@@ -217,34 +302,43 @@ class Gripper:
             open_close = [0, 0, 0, 0, 0, 0, 0, 0, 0, self._discrete_step, -self._discrete_step][action]
             translation = [x, y, z]
             yaw_rotation = a
-        if open_close > 0. and not self._gripper_open:
-            self.robot.open_gripper()
-            self._gripper_open = True
-        elif open_close < 0. and self._gripper_open:
-            self.robot.close_gripper()
-            self._gripper_open = False
+
+        # logging.debug(
+        #     f'open_close: {open_close}, self._gripper_open {self._gripper_open}')
+        # open
+        if open_close > 0.: # and not self._gripper_open:
+            self.open_close_gripper(close=False)
+        # close
+        elif open_close < 0.: # and self._gripper_open:
+            self.open_close_gripper(close=True)
         # Move the robot
         else:
-            return self.robot.relative_pose(translation, yaw_rotation)
+            self.relative_pose(translation, yaw_rotation)
+
+    def open_close_gripper(self, close):
+        print(f'Closing: {close}')
+        self._target_joint_pos = 0.3 if close else  0.6
+        # left
+        self.set_position(4, self._target_joint_pos if close  else -self._target_joint_pos)
+        # right
+        self.set_position(5, -self._target_joint_pos if close else self._target_joint_pos)
+
+
+        self._gripper_open = not close
+        self.step_simulator(0.2)
 
     def absolute_pose(self, target_pos, target_orn):
         # target_pos = self._enforce_constraints(target_pos)
 
-        # TODO YO weird
-        # target_pos[0] *= -1
-        target_pos[1] *= -1
-        target_pos[2] = -1 * (target_pos[2] - self._initial_height)
+        target_pos[2] = (target_pos[2] - self._initial_height)
 
-        # _, _, yaw = transform_utils.euler_from_quaternion(target_orn)
-        # yaw *= -1
         yaw = target_orn
         comp_pos = np.r_[target_pos, yaw]
 
         for i, joint in enumerate(self.main_joints):
-            self._joints[joint].set_position(comp_pos[i])
-            # does setJointMotorControl2
+            self.set_position(joint, comp_pos[i])
 
-        self.run(0.1)
+        self.step_simulator(0.1)
 
     def relative_pose(self, translation, yaw_rotation):
         # necesary because with the hand in an angle the sum to the axis are not straight
@@ -261,65 +355,82 @@ class Gripper:
 
         self.absolute_pose(target_pos, self.endEffectorAngle)
 
-    def to_pose(transform):
+    def to_pose(self, transform):
         translation = transform[:3, 3]
         rotation = transformations.quaternion_from_matrix(transform)
         return translation, rotation
 
-    def _simplified_act(self, action):
-        if not self._discrete:
-            # Parse the action vector
-            translation, yaw_rotation = self._clip_translation_vector(
-                action[:2], action[2])
-        else:
-            assert(isinstance(action, (np.int64, int)))
-            if action < self.num_actions_pad:
-                x = action / self.num_act_grains * self.trans_action_range - self._max_translation
-                y = 0
-                a = 0
-            elif self.num_actions_pad <= action < 2*self.num_actions_pad:
-                action -= self.num_actions_pad
-                x = 0
-                y = action / self.num_act_grains * self.trans_action_range - self._max_translation
-                a = 0
-            else:
-                action -= 2*self.num_actions_pad
-                x = 0
-                y = 0
-                a = action / self.num_act_grains * self.yaw_action_range - self._max_yaw_rotation
-            translation = [x, y]
-            yaw_rotation = a
-        # Add constant Z offset
-        translation = np.r_[translation, 0.005]
-        # Move the robot
-        return self.robot.relative_pose(translation, yaw_rotation)
-
-
     def step(self, action):
-        if self.debug:
-            self.ops.step_debug()
+        # print(f'---------------  eje  z: {self.ops.get_link(2)[0]}')
+        # print(f'---------------  base: {self.ops.get_link(3)[0]}')
+        
+        # if self.debug:
+        #     self.ops.step_debug()
+        # else:
+        #     self.action(action)
+        
+        # if self._model is None:
+        #     self.reset()
+
+        # TODO implementar
+        self.action(action)
+
+        new_obs = self.observe()
+        reward, self.status = self._reward_fn()
+        self.episode_rewards[self.episode_step] = reward
+
+        if self.status != self.Status.RUNNING:
+            done = True
+        elif self.episode_step == self.time_horizon - 1:
+            logging.info("time limit!")
+            done, self.status = True, self.Status.TIME_LIMIT
         else:
-            self.action(action)
-        self.observe()
+            done = False
+
+        # if done:
+        #     self._trigger_event(self.Status.END_OF_EPISODE, self)
+
+        self.episode_step += 1
+        self.obs = new_obs
+
+        return self.obs, reward, done
+
+    def get_gripper_width(self):
+        """Query the current opening width of the gripper."""
+        
+        fr = self.get_joint(5)
+        fl = self.get_joint(4)
+        left_finger_pos = abs(0.3 - fl)
+        right_finger_pos = abs(-0.3 - fr)        
+
+        # logging.debug(
+        #     f'Position R finger: {fr}, Position L finger: {fl} target positions {right_finger_pos, left_finger_pos,} \n Total width: {left_finger_pos + right_finger_pos}')
+
+        return left_finger_pos + right_finger_pos
 
     def observe(self):
-        # pass robot position
-        self.camera.set_relative_position()
-        result = self.camera.get_img()
-        return result
+        camera = True
+        gripper_width = self.get_gripper_width()
+        if camera:
+            self.camera.set_relative_position()
+            rgb, depth, _ = self.camera.get_img()
+
+            sensor_pad  = []
+            
+            # obs_stacked = np.dstack((depth, sensor_pad))
+            # return obs_stacked
+            return depth
+
+    def object_detected(self, tol=0.1):
+        """Grasp detection by checking whether the fingers stalled while closing."""
+        # target joint position is on closing gripper
+        # and
+        # lo mas cercano a cero es que esta cerrado
+        # tol is the minimum with of an object
+        gripper_width = self.get_gripper_width()
+        # print(f'Gripper width: {gripper_width}')
+        # no funciona porque no se mantiene cerrada
+        return self._target_joint_pos == 0.3 and gripper_width > tol
 
     def action(self, action):
-        pass
-
-    def step_simulator():
-        p.step()
-
-    def set_gripper_friction_pybullet(self, lateralFriction=1.15):
-        for i in self.grippersPartsId:
-            p.changeDynamics(self.agent_id, i, lateralFriction=lateralFriction)
-
-    def get_joints(self):
-        for i in range(self._physics_client.getNumJoints(self.model_id)):
-            self.joints[i] = self._physics_client.getJointInfo(self.model_id, i)
-
-
+        self._act(action)

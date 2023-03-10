@@ -70,7 +70,7 @@ class KinderGarten(gym.Env):
         
 
         if agent == 'gripper':
-            self.agent = gripper.Gripper(self.engine, self.physicsClient, self.reward)
+            self.agent = gripper.Gripper(self.engine, self.physicsClient, self.reward, debug=True)
         else:
             # load custom class that expects certain format?
             pass
@@ -93,22 +93,23 @@ class KinderGarten(gym.Env):
         # return observation, info
 
     def step(self, action):
-
-        root.update_idletasks()
-        root.update()
-
         if self.scene_editor:
+            root.update_idletasks()
+            root.update()
             self.scene.update_from_editor(canvas)
 
-        self.agent.step(action)
+        observation, reward, done = self.agent.step(action)
         # logging.info(self.agent.get_pose())
         
 
         # self.run()
-        
+        if done:
+            print("done detected en kindergarden, deberia mandar orden de reset a todas las componentes")
+            self.agent.reset()
+            self.scene.reset()
         terminated = self.scene.isDone()
         # reward = self.reward.compute()
-        reward = None
+    
         observation = self.agent.observe()
         info = None
 
@@ -121,7 +122,7 @@ class KinderGarten(gym.Env):
             # self.scene.reset()
             self.reset()
 
-        return observation, reward, terminated, False, info
+        return observation, reward, done, False, info
 
     def run(self, seconds=1):
         # it should be run after reset and after setting joints
