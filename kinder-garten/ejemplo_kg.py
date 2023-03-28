@@ -9,24 +9,32 @@ import time
 
 from kinder_garten.envs.kinder_garten import KinderGarten
 
-# from stable_baselines3 import PPO
-# from stable_baselines3.common.env_util import make_vec_env
-
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
+from stable_baselines3.common.env_checker import check_env
 import cProfile
 
-from xbox360controller import Xbox360Controller
+# from xbox360controller import Xbox360Controller
 
-controller = Xbox360Controller(axis_threshold=0.2)
+# controller = Xbox360Controller(axis_threshold=0.2)
 
-
+# a =  KinderGarten("gripper",  'table', 'pybullet')
+# check_env(a)
 # Parallel environments
-# env = make_vec_env("CartPole-v1", n_envs=4)
 
-# model = PPO("MlpPolicy", env, verbose=1)
-# model.learn(total_timesteps=4e6)
-# model.save("ppo_cartpole")
+# TODO use monitor https://stable-baselines3.readthedocs.io/en/master/common/monitor.html
+# TODO use callback, keep best models
 
-env = KinderGarten("gripper",  'table', 'pybullet')
+if __name__ == "__main__":
+    env = make_vec_env(lambda: KinderGarten("gripper",  'table', 'pybullet'), n_envs=3, vec_env_cls=SubprocVecEnv)
+
+    model = PPO("MlpPolicy", env, verbose=1)
+    model.learn(total_timesteps=4e6)
+    model.save("ppo_cartpole")
+
+# env = KinderGarten("gripper",  'table', 'pybullet')
+
 # env = KinderGarten("gripper",  'simple', 'pybullet')
 
 
@@ -62,22 +70,22 @@ def get_box(show=True):
     
     return data
 
-idx = 0
+# idx = 0
 
-while True:
-    # action = env.agent.action_space.sample()
-    if type(env.agent.action_space) == gym.spaces.box.Box:
+# while True:
+#     # action = env.agent.action_space.sample()
+#     if type(env.agent.action_space) == gym.spaces.box.Box:
         
-        action = get_box(False)
+#         action = get_box(False)
 
-        # if idx == 100:
-        #     cProfile.run('env.step(action)', filename='env.dat')
+#         # if idx == 100:
+#         #     cProfile.run('env.step(action)', filename='env.dat')
         
-        start = time.time()
+#         start = time.time()
         
-        observation, reward, terminated, _, info = env.step(action)
-        end = time.time() - start
+#         observation, reward, terminated, _, info = env.step(action)
+#         end = time.time() - start
 
-        print(f'Took {end}')
-        idx += 1
+#         print(f'Took {end}')
+#         idx += 1
                 

@@ -7,13 +7,15 @@ from kinder_garten.envs.agents import gripper
 
 from kinder_garten.GUI.utils import root, canvas
 
+from pybullet_utils import bullet_client
+
 import pybullet as p
 
 
 import logging
 
 
-logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
+logging.basicConfig(filename='gripper.log', level=logging.INFO,
                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
                     datefmt='%Y-%m-%d:%H:%M:%S')
 
@@ -40,16 +42,16 @@ class KinderGarten(gym.Env):
         self.agent = None
         self.world = None  # pass engine?
         self.reward = None  # pass all from before
-        self.debug = True
+        self.debug = False
 
         if self.engine == 'pybullet':
             if self.debug:
-                self.physicsClient = p.connect(p.GUI)
+                self.physicsClient = bullet_client.BulletClient(p.GUI)
                 self.prev_reset_btn = 0
-                self.reset_btn = p.addUserDebugParameter('reset', 1,
-                                                 0, 0, physicsClientId=self.physicsClient)
+                self.reset_btn = self.physicsClient.addUserDebugParameter('reset', 1,
+                                                 0, 0)
             else:
-                self.physicsClient = p.connect(p.DIRECT)
+                self.physicsClient = bullet_client.BulletClient(p.DIRECT)
             p.setGravity(0, 0, -10)
 
         # create different worlds
@@ -75,22 +77,25 @@ class KinderGarten(gym.Env):
             # load custom class that expects certain format?
             pass
 
+        self.observation_space = self.agent.observation_space
+        self.action_space = self.agent.action_space
 
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
-        super().reset(seed=seed)
+        # super().reset()
 
         self.scene.reset()
-        self.agent.reset()
+        observation = self.agent.reset()
 
         # observation = self._get_obs()
         # info = self._get_info()
 
-        if self.render_mode == "human":
-            self._render_frame()
+        # if self.render_mode == "human":
+        #     self._render_frame()
 
         # return observation, info
+        return observation
 
     def step(self, action):
         if self.scene_editor:
@@ -98,31 +103,30 @@ class KinderGarten(gym.Env):
             root.update()
             self.scene.update_from_editor(canvas)
 
-        observation, reward, done = self.agent.step(action)
+        observation, reward, done, info = self.agent.step(action)
         # logging.info(self.agent.get_pose())
         
 
         # self.run()
         if done:
-            print("done detected en kindergarden, deberia mandar orden de reset a todas las componentes")
             self.agent.reset()
             self.scene.reset()
         terminated = self.scene.isDone()
         # reward = self.reward.compute()
     
         observation = self.agent.observe()
-        info = None
 
-        btn_val = p.readUserDebugParameter(self.reset_btn)
-        # logging.debug(btn_val)
-        if self.prev_reset_btn < btn_val:
-            # logging.debug(
-            #     f"Resetting scene  ({self.prev_reset_btn} < {btn_val})")
-            self.prev_reset_btn = btn_val
-            # self.scene.reset()
-            self.reset()
+        if self.debug:
+            btn_val = p.readUserDebugParameter(self.reset_btn)
+            # logging.debug(btn_val)
+            if self.prev_reset_btn < btn_val:
+                # logging.debug(
+                #     f"Resetting scene  ({self.prev_reset_btn} < {btn_val})")
+                self.prev_reset_btn = btn_val
+                # self.scene.reset()
+                self.reset()
 
-        return observation, reward, done, False, info
+        return observation, reward, done, info
 
     def run(self, seconds=1):
         # it should be run after reset and after setting joints

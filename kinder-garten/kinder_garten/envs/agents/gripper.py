@@ -15,7 +15,7 @@ import logging
 from pathlib import Path
 
 
-from kinder_garten.envs.agents.rewards import Reward, SimplifiedReward, ShapedCustomReward
+from kinder_garten.envs.agents.rewards import Reward  #, SimplifiedReward, ShapedCustomReward
 
 
 # logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
@@ -41,25 +41,25 @@ class Bullet():
         self._time_step = 1. / 240.
 
         if 1:
-            p.setRealTimeSimulation(1)
+            self.physicsClient.setRealTimeSimulation(1)
         
 
     def get_pose(self):
-        pos, orn, _, _, _, _ = p.getLinkState(self.agent_id, 3)
+        pos, orn, _, _, _, _ = self.physicsClient.getLinkState(self.agent_id, 3)
         return (pos, orn)
 
     def get_link(self, id):
-        pos, orn, _, _, _, _ = p.getLinkState(self.agent_id, id)
+        pos, orn, _, _, _, _ = self.physicsClient.getLinkState(self.agent_id, id)
         return (pos, orn)
 
     def get_joint(self, id):
-        joint_state = p.getJointState(
+        joint_state = self.physicsClient.getJointState(
             self.agent_id, id)
         return joint_state[0]
 
     def set_position(self, joint_id, position, max_force=100.):
         # print(f'Setting {joint_id} to {position}')
-        p.setJointMotorControl2(
+        self.physicsClient.setJointMotorControl2(
             self.agent_id, joint_id,
             controlMode=p.POSITION_CONTROL,
             targetPosition=position,
@@ -67,7 +67,7 @@ class Bullet():
 
     def step_simulator(self, duration):
         for _ in range(int(duration / self._time_step)):
-            p.stepSimulation()
+            self.physicsClient.stepSimulation()
 
     def load_agent_pybullet(self, path, start_pos=[0, 0, 1],
                             start_orn=[0, 0, 0, 1.], scaling=1., static=False):
@@ -75,49 +75,49 @@ class Bullet():
         self.start_orn = start_orn
         logging.info(f'loading {path}')
         if path.endswith('.sdf'):
-            self.agent_id = p.loadSDF(
-                path, globalScaling=scaling, physicsClientId=self.physicsClient)[0]
-            p.changeDynamics(self.agent_id, 4, lateralFriction=10)
-            p.changeDynamics(self.agent_id, 5, lateralFriction=10)
-            p.resetBasePositionAndOrientation(
-                self.agent_id, start_pos, start_orn, physicsClientId=self.physicsClient)
+            self.agent_id = self.physicsClient.loadSDF(
+                path, globalScaling=scaling)[0]
+            self.physicsClient.changeDynamics(self.agent_id, 4, lateralFriction=10)
+            self.physicsClient.changeDynamics(self.agent_id, 5, lateralFriction=10)
+            self.physicsClient.resetBasePositionAndOrientation(
+                self.agent_id, start_pos, start_orn)
         else:
-            self.agent_id = p.loadURDF(
+            self.agent_id = self.physicsClient.loadURDF(
                 path, start_pos, start_orn,
-                globalScaling=scaling, useFixedBase=static, physicsClientId=self.physicsClient)
+                globalScaling=scaling, useFixedBase=static)
 
-        self.joints = p.getNumJoints(self.agent_id)
+        self.joints = self.physicsClient.getNumJoints(self.agent_id)
         self.forces = [100] * self.joints
 
     def reset(self):
         logging.debug(f"Resetting with pos: {self.start_pos} and orn {self.start_orn}")
-        # p.resetBasePositionAndOrientation(
-        #     self.agent_id, self.start_pos, self.start_orn, physicsClientId=self.physicsClient)
+        # self.physicsClient.resetBasePositionAndOrientation(
+        #     self.agent_id, self.start_pos, self.start_orn)
         for i in range(self.joints):
-            p.setJointMotorControlArray(self.agent_id,
+            self.physicsClient.setJointMotorControlArray(self.agent_id,
                                         jointIndices=self.joint_indices,
                                         controlMode=p.POSITION_CONTROL,
                                         targetPositions=[0] * self.joints,
                                         forces=self.forces)
 
 
-        p.resetBasePositionAndOrientation(
-            self.agent_id, self.start_pos, self.start_orn, physicsClientId=self.physicsClient)
+        self.physicsClient.resetBasePositionAndOrientation(
+            self.agent_id, self.start_pos, self.start_orn)
         for idx in self.joint_indices:
-            p.resetJointState(self.agent_id, idx, 0)
+            self.physicsClient.resetJointState(self.agent_id, idx, 0)
         
 
 
     def init_debug(self):
         
-        print(p.getDynamicsInfo(self.agent_id, -1))
+        print(self.physicsClient.getDynamicsInfo(self.agent_id, -1))
 
         self.sliders = []
         self.joint_indices = []
 
         for i in range(self.joints):
             print("-------------------------------")
-            joint_info = p.getJointInfo(self.agent_id, i)
+            joint_info = self.physicsClient.getJointInfo(self.agent_id, i)
             joint_limits = {'lower': joint_info[8], 'upper': joint_info[9],
                             'force': joint_info[10]}
             index = joint_info[0]
@@ -126,8 +126,8 @@ class Bullet():
             print(name)
             print(joint_limits)
 
-            slider = p.addUserDebugParameter(str(name), joint_limits["lower"],
-                                            joint_limits["upper"], 0, physicsClientId=self.physicsClient)
+            slider = self.physicsClient.addUserDebugParameter(str(name), joint_limits["lower"],
+                                            joint_limits["upper"], 0)
             self.sliders.append(slider)
 
             self.joint_indices.append(i)
@@ -137,8 +137,8 @@ class Bullet():
         
         joint_values = []
         for i in range(self.joints):
-            joint_values.append(p.readUserDebugParameter(self.sliders[i]))
-        p.setJointMotorControlArray(self.agent_id,
+            joint_values.append(self.physicsClient.readUserDebugParameter(self.sliders[i]))
+        self.physicsClient.setJointMotorControlArray(self.agent_id,
                                     jointIndices=self.joint_indices,
                                     controlMode=p.POSITION_CONTROL,
                                     targetPositions=joint_values,
@@ -219,7 +219,10 @@ class Gripper:
         self.time_horizon = 150
         self.episode_rewards = np.zeros(self.time_horizon)
 
+        observation = self.observe()
+
         self.ops.reset()
+        return observation
 
     def set_position(self, joint_id, position, max_force=100.):
         self.ops.set_position(joint_id, position, max_force)
@@ -231,14 +234,14 @@ class Gripper:
     def setup_spaces(self):
         self.set_action_space()
 
-        shape = self.camera.width, self.camera.height
+        shape = self.camera.height, self.camera.width
         self.full_obs = False
         if self.full_obs:  # RGB + Depth + Actuator
             self.observation_space = gym.spaces.Box(low=0, high=255,
                                                     shape=(shape[0], shape[1], 5))
-        else:  # Depth + Actuator obs
+        else:  # Depth
             self.observation_space = gym.spaces.Box(low=0, high=255,
-                                                    shape=(shape[0], shape[1], 2))
+                                                    shape=(1, shape[0], shape[1]))
 
 
     def set_action_space(self):
@@ -316,7 +319,7 @@ class Gripper:
             self.relative_pose(translation, yaw_rotation)
 
     def open_close_gripper(self, close):
-        print(f'Closing: {close}')
+        # print(f'Closing: {close}')
         self._target_joint_pos = 0.3 if close else  0.6
         # left
         self.set_position(4, self._target_joint_pos if close  else -self._target_joint_pos)
@@ -393,7 +396,7 @@ class Gripper:
         self.episode_step += 1
         self.obs = new_obs
 
-        return self.obs, reward, done
+        return self.obs, reward, done, dict()
 
     def get_gripper_width(self):
         """Query the current opening width of the gripper."""
@@ -419,7 +422,7 @@ class Gripper:
             
             # obs_stacked = np.dstack((depth, sensor_pad))
             # return obs_stacked
-            return depth
+            return np.expand_dims(depth, axis=0)
 
     def object_detected(self, tol=0.1):
         """Grasp detection by checking whether the fingers stalled while closing."""

@@ -175,7 +175,9 @@ class PyBulletCamera():
         """
         Sets the position of the camera from the robot pose
         """
-        self.get_debug_vals()
+        debug = False
+        if debug:
+            self.get_debug_vals()
         # we need here the position of our robot or X since the camera will be relative to it
 
         h_world_robot = OglOps.from_pose(

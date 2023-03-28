@@ -23,9 +23,9 @@ import math
 # logging.getLogger().addHandler(consoleHandler)
 
 class Scene:
-    def __init__(self, engine, scene, clientId) -> None:
+    def __init__(self, engine, scene, client) -> None:
         
-        self.clientId = clientId
+        self.client = client
         if engine == 'pybullet':
             self.initPyBullet()
             self.load = self.loadPyBullet
@@ -48,10 +48,10 @@ class Scene:
     def initPyBullet(self):
         import pybullet_data
 
-        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        self.client.setAdditionalSearchPath(pybullet_data.getDataPath())
 
     def get_pose(self, id):
-        pos, orn = p.getBasePositionAndOrientation(id)
+        pos, orn = self.client.getBasePositionAndOrientation(id)
         return (pos, orn)
 
     def loadPyBullet(self, object):
@@ -61,15 +61,15 @@ class Scene:
             logging.info(f'Loading {file}')
 
             if file.endswith('.sdf'):
-                model_id = p.loadSDF(file)[0]
+                model_id = self.client.loadSDF(file)[0]
             else:
-                # id = p.loadURDF(file, physicsClientId=self.clientId)
-                id = p.loadURDF(file)
+                id = self.client.loadURDF(file)
+                # id = self.clientId.loadURDF(file)
             if 'detect_surface' in object and object['detect_surface']:
                 self.detect_surface(id)
             
         if 'dir' in object:
-            spawner = SpawSquare(object)
+            spawner = SpawSquare(object, self.client)
             spawner.spawn()
             self.spawners.append(spawner)
         
@@ -81,13 +81,13 @@ class Scene:
 
         rayFrom = (x, y, z+1)
         rayTo = (x, y, z-1)
-        rayInfo = p.rayTest(rayFrom, rayTo)
+        rayInfo = self.client.rayTest(rayFrom, rayTo)
         hit = rayInfo[0][3]
         z = hit[2]
 
-        p.addUserDebugLine(rayFrom, rayTo, [1, 0, 0], 3)
+        self.client.addUserDebugLine(rayFrom, rayTo, [1, 0, 0], 3)
         print(f'{rayInfo} len: {len(rayInfo)}')
-        p.addUserDebugPoints([hit], [[0, 1, 1]], pointSize=10)
+        self.client.addUserDebugPoints([hit], [[0, 1, 1]], pointSize=10)
 
         xs = iter(np.linspace(-1, 1, 30))
         ys = iter(np.linspace(-1, 1, 30))
@@ -104,25 +104,25 @@ class Scene:
                 rayTo = (x, y, z-0.1)
                 rays_from.append(rayFrom)
                 rays_to.append(rayTo)
-                # rayInfo = p.rayTest(rayFrom, rayTo)
-                # p.addUserDebugLine(rayFrom,rayTo,[1,0,0],3)
+                # rayInfo = self.client.rayTest(rayFrom, rayTo)
+                # self.client.addUserDebugLine(rayFrom,rayTo,[1,0,0],3)
                 # print(f'{rayInfo} len: {len(rayInfo)}')
                 
                 # hit = rayInfo[0]
                 # objectUid = hit[0]
                 # if (objectUid == obj_id):
-                #     p.addUserDebugPoints(
+                #     self.client.addUserDebugPoints(
                 #         [rayFrom], [[0, 0, 1]], pointSize=5)
 
                 #     pos_table = hit[3]
                 #     table_planes.append(pos_table)
                 # else:
-                #     p.addUserDebugPoints(
+                #     self.client.addUserDebugPoints(
                 #         [rayFrom], [[0, 1, 0]], pointSize=5)
 
         logging.info('ray request')
 
-        batch = p.rayTestBatch(rays_from, rays_to)
+        batch = self.client.rayTestBatch(rays_from, rays_to)
         # print(batch)
 
         logging.info('analyzing data points')
@@ -139,7 +139,7 @@ class Scene:
         # print([[0, 0, 1]]*len(table_planes))
 
         logging.info('painting points')
-        p.addUserDebugPoints(
+        self.client.addUserDebugPoints(
             table_planes, [[0, 0, 1]]*len(table_planes), pointSize=5)
 
         x_min= 10000
@@ -153,13 +153,13 @@ class Scene:
             x_max = x if x > x_max else x_max
             y_max = y if y > y_max else y_max
 
-        p.addUserDebugPoints(
+        self.client.addUserDebugPoints(
             [[x_min, y_min, z]], [[0, 0, 0]], pointSize=10)
-        p.addUserDebugPoints(
+        self.client.addUserDebugPoints(
             [[x_min, y_max, z]], [[0, 0, 0]], pointSize=10)
-        p.addUserDebugPoints(
+        self.client.addUserDebugPoints(
             [[x_max, y_min, z]], [[0, 0, 0]], pointSize=10)
-        p.addUserDebugPoints(
+        self.client.addUserDebugPoints(
             [[x_max, y_max, z]], [[0, 0, 0]], pointSize=10)
             
 
@@ -216,9 +216,9 @@ class Scene:
             angle = math.degrees(math.atan(vector[1]/vector[0]))
 
             if 90.0 == abs(angle):
-                orientation = p.getQuaternionFromEuler([1.57, 0, 1.57])
+                orientation = self.client.getQuaternionFromEuler([1.57, 0, 1.57])
             else:
-                orientation = p.getQuaternionFromEuler([1.57, 0, 0])
+                orientation = self.client.getQuaternionFromEuler([1.57, 0, 0])
 
             print(f'----- {angle}')
             magnitude = np.sqrt(vector.dot(vector))
@@ -228,10 +228,10 @@ class Scene:
             
             # middle of the plane in between the 2 planes
             # plane1x1 = "kinder-garten/kinder_garten/envs/scene/objects/plane/plane_1x1.urdf"
-            # id = p.loadURDF(plane1x1, basePosition=mid_point, baseOrientation=orientation, globalScaling=magnitude)
+            # id = self.client.loadURDF(plane1x1, basePosition=mid_point, baseOrientation=orientation, globalScaling=magnitude)
             meshScale = [1*magnitude, 1, 3]
             shift = [0, -0.02, 0]
-            visualShapeId = p.createVisualShape(shapeType=p.GEOM_MESH,
+            visualShapeId = self.client.createVisualShape(shapeType=self.client.GEOM_MESH,
                                     fileName="objects/plane/a.obj",
                                     rgbaColor=[1, 0, 0, 1],
                                     specularColor=[0.4, .4, 0],
@@ -240,7 +240,7 @@ class Scene:
 
             # TODO add collision shape
 
-            p.createMultiBody(baseMass=0,
+            self.client.createMultiBody(baseMass=0,
                       baseInertialFramePosition=[0, 0, 0],
                     #   baseCollisionShapeIndex=collisionShapeId,
                       baseVisualShapeIndex=visualShapeId,
@@ -249,17 +249,18 @@ class Scene:
                       useMaximalCoordinates=True)
 
             # print(f'drawing lines {p1} {p2}')
-            p.addUserDebugLine(p1, p2, lineColorRGB=[1,1,0], lineWidth=5)
+            self.client.addUserDebugLine(p1, p2, lineColorRGB=[1,1,0], lineWidth=5)
 
         # TODO add spawning area processing
 
 class SpawSquare:
-    def __init__(self, obj, debug=True) -> None:
+    def __init__(self, obj, client, debug=True) -> None:
         self.dir = obj['dir']
         position = obj['position']
         self.position = position
         size = obj['size']
         self._reset = obj['reset']
+        self.client = client
 
         size /= 2
         self.size = size
@@ -269,10 +270,10 @@ class SpawSquare:
             p2 = (position[0] - size, position[1] + size, position[2])
             p3 = (position[0] + size, position[1] - size, position[2])
             p4 = (position[0] + size, position[1] + size, position[2])
-            p.addUserDebugLine(p1, p2)
-            p.addUserDebugLine(p1, p3)
-            p.addUserDebugLine(p2, p4)
-            p.addUserDebugLine(p3, p4)
+            self.client.addUserDebugLine(p1, p2)
+            self.client.addUserDebugLine(p1, p3)
+            self.client.addUserDebugLine(p2, p4)
+            self.client.addUserDebugLine(p3, p4)
 
     def spawn(self):
         self.loaded_objs = set()
@@ -282,16 +283,16 @@ class SpawSquare:
                     pos = (self.position[0] + self.size * random.uniform(-1, 1),
                            self.position[1] + self.size * random.uniform(-1, 1),
                            self.position[2])
-                    id = p.loadURDF(
+                    id = self.client.loadURDF(
                         f'{self.dir}/{obj}', pos, useFixedBase=False)
-                    print(f'Object with id {id}')
+                    # print(f'Object with id {id}')
                     self.loaded_objs.add(id)
 
     def reset(self):
         if self._reset:
             for obj in self.loaded_objs:
-                print(f'Remove obj with id {obj}')
-                p.removeBody(obj)
+                # print(f'Remove obj with id {obj}')
+                self.client.removeBody(obj)
             self.loaded_objs = set()
         self.spawn()
 

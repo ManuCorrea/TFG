@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+# import matplotlib.pyplot as plt
+# from matplotlib.animation import FuncAnimation
 import numpy as np
 
 class Reward:
@@ -37,11 +37,11 @@ class Reward:
 
         self.reset()
 
-        plt.ion()  # Note this correction
+        # plt.ion()  # Note this correction
 
 
-        fig = plt.figure()
-        plt.axis([0, 500, -1, 10])
+        # fig = plt.figure()
+        # plt.axis([0, 500, -1, 10])
 
         self.i = 0
         self.x = list()
@@ -83,16 +83,16 @@ class Reward:
 
 
         
-        self.x.append(self.i)
-        self.y.append(reward)
-        plt.scatter(self.i, reward)
+        # self.x.append(self.i)
+        # self.y.append(reward)
+        # plt.scatter(self.i, reward)
         self.i += 1
-        plt.show()
+        # plt.show()
         # if self.i % 50 == 0:
         #     plt.pause(0.000000000001)
 
         self._old_robot_height = robot_height
-        print(reward)
+        # print(reward)
         return reward, self._robot.Status.RUNNING
 
     def reset(self):
