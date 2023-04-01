@@ -1,4 +1,3 @@
-from turtle import width
 import pybullet as p
 import math
 import numpy as np
