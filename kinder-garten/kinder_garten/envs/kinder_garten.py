@@ -3,9 +3,7 @@ from gym import spaces
 import numpy as np
 # from agents import gripper
 from kinder_garten.envs.scene import scene
-from kinder_garten.envs.agents import gripper
-
-from kinder_garten.GUI.utils import root, canvas
+from kinder_garten.envs.agents import gripper, ant
 
 from pybullet_utils import bullet_client
 
@@ -35,14 +33,14 @@ logging.getLogger().addHandler(consoleHandler)
 class KinderGarten(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, agent, scene_name, engine, render_mode=None, size=5):
+    def __init__(self, agent, scene_name, engine, render_mode=None, size=5, debug=False):
 
         self.engine = engine
 
         self.agent = None
         self.world = None  # pass engine?
         self.reward = None  # pass all from before
-        self.debug = False
+        self.debug = debug
 
         if self.engine == 'pybullet':
             if self.debug:
@@ -64,6 +62,8 @@ class KinderGarten(gym.Env):
         elif scene_name == 'table':
             self.scene = scene.Scene(self.engine, scene_name,  self.physicsClient)
         elif scene_name == 'editor':
+            from kinder_garten.GUI.utils import UserInterface
+            self.user_interface = UserInterface()
             self.scene_editor = True
             self.scene = scene.Scene(self.engine, scene_name,  self.physicsClient)
         else:
@@ -73,6 +73,9 @@ class KinderGarten(gym.Env):
 
         if agent == 'gripper':
             self.agent = gripper.Gripper(self.engine, self.physicsClient, self.reward, debug=True)
+        if agent == 'ant':
+            self.agent = ant.Gripper(
+                self.engine, self.physicsClient, self.reward, debug=True)
         else:
             # load custom class that expects certain format?
             pass
@@ -99,9 +102,10 @@ class KinderGarten(gym.Env):
 
     def step(self, action):
         if self.scene_editor:
-            root.update_idletasks()
-            root.update()
-            self.scene.update_from_editor(canvas)
+            # TODO decouple root update thing
+            # print("stepping editor")
+            self.user_interface.update_UI()
+            self.scene.update_from_editor(self.user_interface)
 
         observation, reward, done, info = self.agent.step(action)
         # logging.info(self.agent.get_pose())

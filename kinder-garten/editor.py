@@ -28,7 +28,6 @@ idx = 0
 
 while True:
     action = env.agent.action_space.sample()
-    print(action)
     if type(env.agent.action_space) == gym.spaces.box.Box:
         
         # action = get_box(False)

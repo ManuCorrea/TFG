@@ -21,8 +21,8 @@ class Reward:
         self._shaped = True
 
         # self._max_delta_z = robot._actuator._max_translation
-        self._terminal_reward = 10
-        self._grasp_reward = 1
+        self._terminal_reward = 1000
+        self._grasp_reward = 10
         #  how important is the delta z (up)
         self._delta_z_scale = 1000
         self._lift_success = self._terminal_reward # config.get('lift_success', self._terminal_reward)
@@ -53,22 +53,21 @@ class Reward:
         robot_height = position[2]
         reward = 0.
 
-        if self._robot.object_detected():
-            print("Object detected")
+        if self._robot.object_detected(tol=0.25):
+            # print("Object detected")
             if not self._lifting:
                 self._start_height = robot_height
                 self._lifting = True
-            print("\t", robot_height, self._start_height, self.lift_dist)
+            # print("\t", robot_height, self._start_height, self.lift_dist)
             if robot_height - self._start_height > self.lift_dist:
-                print(
-                    f'Got this up: {robot_height - self._start_height} must be higher thatn {self.lift_dist}')
                 # Object was lifted by the desired amount
-                print("\n\n\n\n\n\n DONE \n\n\n\n\n\n")
+                print("\n DONE \n")
                 return self._terminal_reward, self._robot.Status.SUCCESS
             if self._shaped:
                 # Intermediate rewards for grasping and lifting
                 delta_z = robot_height - self._old_robot_height
-                reward = self._grasp_reward + self._delta_z_scale * delta_z
+                lifting_reward = self._grasp_reward + self._delta_z_scale * delta_z
+                reward = lifting_reward
 
         else:
             self._lifting = False
@@ -79,7 +78,7 @@ class Reward:
         # else:
         #     reward -= 0.01
 
-        reward -= 0.1
+        reward -= 0.5
 
 
         

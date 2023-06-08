@@ -1,18 +1,15 @@
 from enum import Enum
 from kinder_garten.envs.camera.camera import PyBulletCamera
-import pybullet as p
 import gym
 import numpy as np
 
 from pybullet_utils import transformations
 
-from sklearn.preprocessing import MinMaxScaler
-
 from dataclasses import dataclass
 
 import logging
 
-from pathlib import Path
+from ..bullet import Bullet
 
 
 from kinder_garten.envs.agents.rewards import Reward  #, SimplifiedReward, ShapedCustomReward
@@ -31,118 +28,6 @@ class ActionStateSpaces:
     maxTranslation: float = 0.01
     maxYawRotation: float = 0.1
     maxForce: float = 100
-
-class Bullet():
-    def __init__(self, physicsClient) -> None:
-        self.physicsClient = physicsClient
-        path = str(Path(__file__).parent/'gripper/gripper.sdf')
-        logging.info(f'loading model from {path}')
-        self.load_agent_pybullet(path, start_pos=[0,0,0.8])
-        self._time_step = 1. / 240.
-
-        if 1:
-            self.physicsClient.setRealTimeSimulation(1)
-        
-
-    def get_pose(self):
-        pos, orn, _, _, _, _ = self.physicsClient.getLinkState(self.agent_id, 3)
-        return (pos, orn)
-
-    def get_link(self, id):
-        pos, orn, _, _, _, _ = self.physicsClient.getLinkState(self.agent_id, id)
-        return (pos, orn)
-
-    def get_joint(self, id):
-        joint_state = self.physicsClient.getJointState(
-            self.agent_id, id)
-        return joint_state[0]
-
-    def set_position(self, joint_id, position, max_force=100.):
-        # print(f'Setting {joint_id} to {position}')
-        self.physicsClient.setJointMotorControl2(
-            self.agent_id, joint_id,
-            controlMode=p.POSITION_CONTROL,
-            targetPosition=position,
-            force=max_force)
-
-    def step_simulator(self, duration):
-        for _ in range(int(duration / self._time_step)):
-            self.physicsClient.stepSimulation()
-
-    def load_agent_pybullet(self, path, start_pos=[0, 0, 1],
-                            start_orn=[0, 0, 0, 1.], scaling=1., static=False):
-        self.start_pos = start_pos
-        self.start_orn = start_orn
-        logging.info(f'loading {path}')
-        if path.endswith('.sdf'):
-            self.agent_id = self.physicsClient.loadSDF(
-                path, globalScaling=scaling)[0]
-            self.physicsClient.changeDynamics(self.agent_id, 4, lateralFriction=10)
-            self.physicsClient.changeDynamics(self.agent_id, 5, lateralFriction=10)
-            self.physicsClient.resetBasePositionAndOrientation(
-                self.agent_id, start_pos, start_orn)
-        else:
-            self.agent_id = self.physicsClient.loadURDF(
-                path, start_pos, start_orn,
-                globalScaling=scaling, useFixedBase=static)
-
-        self.joints = self.physicsClient.getNumJoints(self.agent_id)
-        self.forces = [100] * self.joints
-
-    def reset(self):
-        logging.debug(f"Resetting with pos: {self.start_pos} and orn {self.start_orn}")
-        # self.physicsClient.resetBasePositionAndOrientation(
-        #     self.agent_id, self.start_pos, self.start_orn)
-        for i in range(self.joints):
-            self.physicsClient.setJointMotorControlArray(self.agent_id,
-                                        jointIndices=self.joint_indices,
-                                        controlMode=p.POSITION_CONTROL,
-                                        targetPositions=[0] * self.joints,
-                                        forces=self.forces)
-
-
-        self.physicsClient.resetBasePositionAndOrientation(
-            self.agent_id, self.start_pos, self.start_orn)
-        for idx in self.joint_indices:
-            self.physicsClient.resetJointState(self.agent_id, idx, 0)
-        
-
-
-    def init_debug(self):
-        
-        print(self.physicsClient.getDynamicsInfo(self.agent_id, -1))
-
-        self.sliders = []
-        self.joint_indices = []
-
-        for i in range(self.joints):
-            print("-------------------------------")
-            joint_info = self.physicsClient.getJointInfo(self.agent_id, i)
-            joint_limits = {'lower': joint_info[8], 'upper': joint_info[9],
-                            'force': joint_info[10]}
-            index = joint_info[0]
-            name = joint_info[1]
-            print(index)
-            print(name)
-            print(joint_limits)
-
-            slider = self.physicsClient.addUserDebugParameter(str(name), joint_limits["lower"],
-                                            joint_limits["upper"], 0)
-            self.sliders.append(slider)
-
-            self.joint_indices.append(i)
-            print("-------------------------------")
-
-    def step_debug(self):
-        
-        joint_values = []
-        for i in range(self.joints):
-            joint_values.append(self.physicsClient.readUserDebugParameter(self.sliders[i]))
-        self.physicsClient.setJointMotorControlArray(self.agent_id,
-                                    jointIndices=self.joint_indices,
-                                    controlMode=p.POSITION_CONTROL,
-                                    targetPositions=joint_values,
-                                    forces=self.forces)
 
 
 class Gripper:
@@ -167,12 +52,12 @@ class Gripper:
 
         self.debug = debug
 
-        self.width = 224
-        self.height = 171
+        self.width = 64
+        self.height = 64
         if engine == 'pybullet':
             # self.camera = camera.PyBulletCamera()
             self.physicsClient = physicsClient
-            self.ops = Bullet(self.physicsClient)
+            self.ops = Bullet(self.physicsClient, 'agents/gripper/gripper.sdf')
             self.camera = PyBulletCamera(self, self.width, self.height, K=None)
 
             if self.debug:
@@ -185,8 +70,6 @@ class Gripper:
         self._gripper_open = True
         self.endEffectorAngle = 0.
 
-        print(f'---------------  eje  z: {self.ops.get_link(2)[0][2]}')
-        print(f'---------------  base: {self.ops.get_link(3)[0]}')
         # TODO double check
         self._initial_height = self.ops.get_link(2)[0][2]
 
@@ -240,8 +123,12 @@ class Gripper:
             self.observation_space = gym.spaces.Box(low=0, high=255,
                                                     shape=(shape[0], shape[1], 5))
         else:  # Depth
+            # TODO cambiar imagen shape
+            # Although SB3 supports both channel-last and channel-first images as input, we recommend using the channel-first convention when possible
+            # https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html
             self.observation_space = gym.spaces.Box(low=0, high=255,
-                                                    shape=(1, shape[0], shape[1]))
+                                                    shape=(3, shape[0], shape[1]),
+                                                    dtype=np.uint8)
 
 
     def set_action_space(self):
@@ -252,15 +139,6 @@ class Gripper:
             #TODO Implement the linear discretization for full environment
             # self.action_space = gym.spaces.Discrete(self.num_actions_pad*5) # +1 to add no action(zero action)
         else:
-            high = np.array([self._max_translation,
-                self._max_translation,
-                self._max_translation,
-                self._max_yaw_rotation,
-                1.])
-
-            self._action_scaler = MinMaxScaler((-1, 1))
-            self._action_scaler.fit(np.vstack((-1. * high, high)))
-
             self.action_space = gym.spaces.Box(-1.,
                                                1., shape=(5,), dtype=np.float32)
             logging.info("gym.spaces.Box(-1., 1., shape=(5,), dtype=np.float32)")
@@ -315,8 +193,8 @@ class Gripper:
         elif open_close < 0.: # and self._gripper_open:
             self.open_close_gripper(close=True)
         # Move the robot
-        else:
-            self.relative_pose(translation, yaw_rotation)
+
+        self.relative_pose(translation, yaw_rotation)
 
     def open_close_gripper(self, close):
         # print(f'Closing: {close}')
@@ -376,7 +254,7 @@ class Gripper:
         #     self.reset()
 
         # TODO implementar
-        self.action(action)
+        self._act(action)
 
         new_obs = self.observe()
         reward, self.status = self._reward_fn()
@@ -385,7 +263,7 @@ class Gripper:
         if self.status != self.Status.RUNNING:
             done = True
         elif self.episode_step == self.time_horizon - 1:
-            logging.info("time limit!")
+            # logging.info("time limit!")
             done, self.status = True, self.Status.TIME_LIMIT
         else:
             done = False
@@ -422,18 +300,22 @@ class Gripper:
             
             # obs_stacked = np.dstack((depth, sensor_pad))
             # return obs_stacked
-            return np.expand_dims(depth, axis=0)
+            # depth = np.expand_dims(depth, axis=0).astype(np.uint8)
+            return rgb
 
     def object_detected(self, tol=0.1):
         """Grasp detection by checking whether the fingers stalled while closing."""
+        
         # target joint position is on closing gripper
         # and
         # lo mas cercano a cero es que esta cerrado
         # tol is the minimum with of an object
         gripper_width = self.get_gripper_width()
+        
+        # print(f"Tolerancia: {self._target_joint_pos == 0.3 and gripper_width }")
+        
         # print(f'Gripper width: {gripper_width}')
         # no funciona porque no se mantiene cerrada
         return self._target_joint_pos == 0.3 and gripper_width > tol
 
-    def action(self, action):
-        self._act(action)
+        

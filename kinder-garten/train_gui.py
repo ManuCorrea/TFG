@@ -7,7 +7,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
 # genera ventana de TK, ver pq
-# from kinder_garten.envs.kinder_garten import KinderGarten
+from kinder_garten.envs.kinder_garten import KinderGarten
 
 # Import module
 from tkinter import *
@@ -32,15 +32,18 @@ SCENES_KG = ["Plane", "table"]
 def show():
     rl_alg = rl_algo_menu.get()
     agent = agent_menu.get()
+    print(agent, rl_alg)
     time_steps = int(time_steps_input.get())
     if agent in AGENTS_GYM:
         env = make_vec_env("CartPole-v1", n_envs=2)
     elif agent in AGENTS_KG:
+        scene = scene_menu.get()
+        n_envs = int(n_envs_input.get())
+        print(n_envs)
         wrappable_env = KinderGarten(agent,  scene, 'pybullet')
         env = make_vec_env(lambda: wrappable_env, n_envs=3, vec_env_cls=SubprocVecEnv)
-
-    scene = scene_menu.get()
-    root.destroy()
+    
+    # root.destroy()
     rl_func = RL_ALGORITHMS_FUNCTIONS[rl_alg]
     
     
@@ -59,7 +62,7 @@ RL_ALGORITHMS = [
 ]
 
 AGENT = [
-    "Gripper",
+    "gripper",
     "Walker",
     "CartPole-v1"
 ]
@@ -79,7 +82,7 @@ if __name__ == "__main__":
     root = Tk()
     
     # Adjust size
-    root.geometry( "200x200" )
+    root.geometry( "400x400" )
 
     rl_algo_menu = StringVar()
     rl_algo_menu.set("A2C")
@@ -87,7 +90,7 @@ if __name__ == "__main__":
     drop.grid()
 
     agent_menu = StringVar()
-    agent_menu.set("Gripper")
+    agent_menu.set("gripper")
     drop = OptionMenu( root , agent_menu , *AGENT )
     drop.grid()
 
@@ -95,28 +98,37 @@ if __name__ == "__main__":
     scene_menu.set("Plane")
     drop = OptionMenu( root , scene_menu , *SCENE )
     drop.grid()
+
+    policy_menu = StringVar()
+    policy_menu.set(POLICY[0])
+    drop = OptionMenu(root, policy_menu, *POLICY)
+    drop.grid()
     
-    # Create button, it will change label text
-    button = Button( root , text = "Train" , command = show ).grid()
+
     
-    time_steps_input = Entry(root)
-    time_steps_input.insert(0, "100000")
-    time_steps_input.grid()
+    # time_steps_input = Entry(root)
+    # time_steps_input.insert(0, "100000")
+    # time_steps_input.grid()
 
     # Create Label
     label = Label( root , text = " " )
     label.grid()
 
     tk.Label(root, text="time_steps").grid(row=5)
-    tk.Label(root, text="Last Name").grid(row=6)
+    tk.Label(root, text="n environments").grid(row=6)
 
-    e1 = tk.Entry(root)
-    e2 = tk.Entry(root)
-    e1.insert(10, "100000")
-    e2.insert(10, "Jill")
+    time_steps_input = tk.Entry(root)
+    n_envs_input = tk.Entry(root)
+    time_steps_input.insert(10, "100000")
+    n_envs_input.insert(10, "1")
 
-    e1.grid(row=5, column=1)
-    e2.grid(row=6, column=1)
+    time_steps_input.grid(row=5, column=1)
+    n_envs_input.grid(row=6, column=1)
+
+    # Create button, it will change label text
+    button = Button( root , text = "Train" , command = show ).grid()
+
+    # TODO input for n envs
 
     # Execute tkinter
     root.mainloop()
