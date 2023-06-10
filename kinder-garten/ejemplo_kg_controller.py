@@ -77,6 +77,7 @@ while True:
         
         observation, reward, terminated, info = env.step(action)
         end = time.time() - start
+        print(reward)
         rewards.append(reward)
 
         if terminated:

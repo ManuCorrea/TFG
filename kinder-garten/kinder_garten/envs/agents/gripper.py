@@ -11,17 +11,8 @@ import logging
 
 from ..bullet import Bullet
 
+from kinder_garten.envs.agents.rewards import Reward
 
-from kinder_garten.envs.agents.rewards import Reward  #, SimplifiedReward, ShapedCustomReward
-
-
-# logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
-#                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-#                     datefmt='%Y-%m-%d:%H:%M:%S')
-
-"""
-continuous or discrete
-"""
 
 @dataclass
 class ActionStateSpaces:
@@ -70,13 +61,11 @@ class Gripper:
         self._gripper_open = True
         self.endEffectorAngle = 0.
 
-        # TODO double check
         self._initial_height = self.ops.get_link(2)[0][2]
 
         # TODO documentar
         self.main_joints =  [0, 1, 2, 3]
 
-        # TODO get sure about this value
         self._target_joint_pos = None
 
         self.episode_step = 0
@@ -126,18 +115,21 @@ class Gripper:
             # TODO cambiar imagen shape
             # Although SB3 supports both channel-last and channel-first images as input, we recommend using the channel-first convention when possible
             # https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html
+            # self.observation_space = gym.spaces.Box(low=0, high=255,
+            #                                         shape=(3, shape[0], shape[1]),
+            #                                         dtype=np.uint8)
+
             self.observation_space = gym.spaces.Box(low=0, high=255,
-                                                    shape=(3, shape[0], shape[1]),
-                                                    dtype=np.uint8)
+                                        shape=(1,shape[0], shape[1]),
+                dtype=np.uint8)
+            
+            # print(self.observation_space)
 
 
     def set_action_space(self):
         if self._discrete:
-
-            # [no, -x, +x, -y, +y, -z, +z, -yaw, +yaw, open, close]
             self.action_space = gym.spaces.Discrete(11)
-            #TODO Implement the linear discretization for full environment
-            # self.action_space = gym.spaces.Discrete(self.num_actions_pad*5) # +1 to add no action(zero action)
+
         else:
             self.action_space = gym.spaces.Box(-1.,
                                                1., shape=(5,), dtype=np.float32)
@@ -198,7 +190,8 @@ class Gripper:
 
     def open_close_gripper(self, close):
         # print(f'Closing: {close}')
-        self._target_joint_pos = 0.3 if close else  0.6
+        self._target_joint_pos = 0.3 if close else  0.5
+        # print(f"self._target_joint_pos {self._target_joint_pos}")
         # left
         self.set_position(4, self._target_joint_pos if close  else -self._target_joint_pos)
         # right
@@ -206,7 +199,7 @@ class Gripper:
 
 
         self._gripper_open = not close
-        self.step_simulator(0.2)
+        self.step_simulator(1)
 
     def absolute_pose(self, target_pos, target_orn):
         # target_pos = self._enforce_constraints(target_pos)
@@ -242,18 +235,6 @@ class Gripper:
         return translation, rotation
 
     def step(self, action):
-        # print(f'---------------  eje  z: {self.ops.get_link(2)[0]}')
-        # print(f'---------------  base: {self.ops.get_link(3)[0]}')
-        
-        # if self.debug:
-        #     self.ops.step_debug()
-        # else:
-        #     self.action(action)
-        
-        # if self._model is None:
-        #     self.reset()
-
-        # TODO implementar
         self._act(action)
 
         new_obs = self.observe()
@@ -268,12 +249,10 @@ class Gripper:
         else:
             done = False
 
-        # if done:
-        #     self._trigger_event(self.Status.END_OF_EPISODE, self)
-
         self.episode_step += 1
         self.obs = new_obs
-
+        # print("obs:")
+        # print(self.obs)
         return self.obs, reward, done, dict()
 
     def get_gripper_width(self):
@@ -284,9 +263,6 @@ class Gripper:
         left_finger_pos = abs(0.3 - fl)
         right_finger_pos = abs(-0.3 - fr)        
 
-        # logging.debug(
-        #     f'Position R finger: {fr}, Position L finger: {fl} target positions {right_finger_pos, left_finger_pos,} \n Total width: {left_finger_pos + right_finger_pos}')
-
         return left_finger_pos + right_finger_pos
 
     def observe(self):
@@ -294,28 +270,20 @@ class Gripper:
         gripper_width = self.get_gripper_width()
         if camera:
             self.camera.set_relative_position()
-            rgb, depth, _ = self.camera.get_img()
+            _, depth, _ = self.camera.get_img()
 
             sensor_pad  = []
             
             # obs_stacked = np.dstack((depth, sensor_pad))
             # return obs_stacked
             # depth = np.expand_dims(depth, axis=0).astype(np.uint8)
-            return rgb
+            return depth
 
     def object_detected(self, tol=0.1):
         """Grasp detection by checking whether the fingers stalled while closing."""
         
-        # target joint position is on closing gripper
-        # and
-        # lo mas cercano a cero es que esta cerrado
-        # tol is the minimum with of an object
         gripper_width = self.get_gripper_width()
         
         # print(f"Tolerancia: {self._target_joint_pos == 0.3 and gripper_width }")
-        
-        # print(f'Gripper width: {gripper_width}')
-        # no funciona porque no se mantiene cerrada
+        # print(f'Gripper width: {gripper_width} {self._target_joint_pos}')
         return self._target_joint_pos == 0.3 and gripper_width > tol
-
-        

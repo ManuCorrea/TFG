@@ -1,6 +1,8 @@
 # import matplotlib.pyplot as plt
 # from matplotlib.animation import FuncAnimation
 import numpy as np
+import time
+
 
 class Reward:
     """Simple reward function reinforcing upwards movement of grasped objects."""
@@ -21,10 +23,10 @@ class Reward:
         self._shaped = True
 
         # self._max_delta_z = robot._actuator._max_translation
-        self._terminal_reward = 1000
+        self._terminal_reward = 10000
         self._grasp_reward = 10
         #  how important is the delta z (up)
-        self._delta_z_scale = 1000
+        self._delta_z_scale = 15000
         self._lift_success = self._terminal_reward # config.get('lift_success', self._terminal_reward)
         self._time_penalty = 100  # 100
         self._table_clearing = False
@@ -53,21 +55,31 @@ class Reward:
         robot_height = position[2]
         reward = 0.
 
-        if self._robot.object_detected(tol=0.25):
-            # print("Object detected")
-            if not self._lifting:
-                self._start_height = robot_height
-                self._lifting = True
-            # print("\t", robot_height, self._start_height, self.lift_dist)
-            if robot_height - self._start_height > self.lift_dist:
-                # Object was lifted by the desired amount
-                print("\n DONE \n")
-                return self._terminal_reward, self._robot.Status.SUCCESS
-            if self._shaped:
-                # Intermediate rewards for grasping and lifting
-                delta_z = robot_height - self._old_robot_height
-                lifting_reward = self._grasp_reward + self._delta_z_scale * delta_z
-                reward = lifting_reward
+        # si no toca la mesa y coge objeto
+        if not position[2] < 0.76:
+            # print("---------------------------------------------------------")
+
+            if self._robot.object_detected(tol=0.12):
+                # print("Object detected")
+                if not self._lifting:
+                    self._start_height = robot_height
+                    self._lifting = True
+                # print("\t", robot_height, self._start_height, self.lift_dist)
+                if robot_height - self._start_height > self.lift_dist:
+                    # Object was lifted by the desired amount
+                    # print("\n DONE \n")
+                    return self._terminal_reward, self._robot.Status.SUCCESS
+                if self._shaped:
+                    
+                    # Intermediate rewards for grasping and lifting
+                    delta_z = robot_height - self._old_robot_height
+                    
+                    lifting_reward = self._grasp_reward + self._delta_z_scale * delta_z
+                    # print(f"doing shaped {delta_z} {lifting_reward}")
+                    reward = lifting_reward
+                    # if reward>300:
+                    #     time.sleep(1)
+                    #     print("High reward")
 
         else:
             self._lifting = False
@@ -78,7 +90,7 @@ class Reward:
         # else:
         #     reward -= 0.01
 
-        reward -= 0.5
+        reward -= 5
 
 
         
@@ -100,54 +112,3 @@ class Reward:
         self._lifting = False
 
 
-
-class ShapedCustomReward(Reward):
-
-    def __call__(self, obs, action, new_obs):
-        position, _ = self._robot.get_pose()
-        robot_height = position[2]
-        reward = 0.
-
-        if self._robot.object_detected():
-            # print("Object detected")
-            if not self._lifting:
-                self._start_height = robot_height
-                self._lifting = True
-
-            # print(
-            #     f'Got this up: {robot_height - self._start_height} must be higher thatn {self.lift_dist}')
-            if robot_height - self._start_height > self.lift_dist:
-                if self._table_clearing:
-                    # Object was lifted by the desired amount
-                    grabbed_obj = self._robot.find_highest()
-                    if grabbed_obj is not -1:
-                        self._robot.remove_model(grabbed_obj)
-
-                    # Multiple object grasping
-                    # grabbed_objs = self._robot.find_higher(self.lift_dist)
-                    # if grabbed_objs:
-                    #     self._robot.remove_models(grabbed_objs)
-
-                    self._robot.open_gripper()
-                    if self._robot.get_num_body() == 2:
-                        return self._terminal_reward, robot.RobotEnv.Status.SUCCESS
-                    return self._lift_success, robot.RobotEnv.Status.RUNNING
-                else:
-                    if not self._shaped:
-                        return 1., robot.RobotEnv.Status.SUCCESS
-                    return self._terminal_reward, robot.RobotEnv.Status.SUCCESS
-            if self._shaped:
-                # Intermediate rewards for grasping and lifting
-                delta_z = robot_height - self._old_robot_height
-                reward = self._grasp_reward + self._delta_z_scale * delta_z
-        else:
-            self._lifting = False
-
-        # Time penalty
-        if self._shaped:
-            reward -= self._time_penalty
-        else:
-            reward -= 0.01
-
-        self._old_robot_height = robot_height
-        return reward, robot.RobotEnv.Status.RUNNING

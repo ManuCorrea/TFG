@@ -326,6 +326,9 @@ class SpawnSquare:
                     # print(f'Object with id {id}')
                     self.loaded_objs.add(id)
 
+                    self.client.changeDynamics(
+                        id, 0, lateralFriction=20)
+
     def reset(self):
         if self._reset:
             for obj in self.loaded_objs:

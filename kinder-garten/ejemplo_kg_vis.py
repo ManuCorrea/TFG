@@ -1,15 +1,20 @@
 import pybullet as p
 import time
-import pybullet_data
 import gym
-import numpy as np
 import time
-import time
-
+import cv2
 from kinder_garten.envs.kinder_garten import KinderGarten
+from stable_baselines3.common.env_checker import check_env
 
 
-env = KinderGarten("gripper",  'table', 'pybullet', debug=True)
+
+env = KinderGarten(agent="gripper", scene_name='table',
+                   engine='pybullet')
+
+
+env = KinderGarten(agent="gripper", scene_name='table', engine='pybullet', debug=True)
+check_env(env, warn=True)
+
 # env = KinderGarten("gripper",  'simple', 'pybullet')
 
 idx = 0
@@ -19,15 +24,19 @@ while True:
     if type(env.agent.action_space) == gym.spaces.box.Box:
         
         action = env.action_space.sample()
-
-        # if idx == 100:
-        #     cProfile.run('env.step(action)', filename='env.dat')
         
         start = time.time()
         
         observation, reward, terminated, info = env.step(action)
         end = time.time() - start
         rewards.append(reward)
+
+        cv2.imshow('Frame', observation[0])
+
+        # Press Q on keyboard to  exit
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            break
+
 
         if terminated:
             print(f"reward: {sum(rewards)}")
