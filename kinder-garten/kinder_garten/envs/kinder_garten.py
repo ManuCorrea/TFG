@@ -3,7 +3,7 @@ from gym import spaces
 import numpy as np
 # from agents import gripper
 from kinder_garten.envs.scene import scene
-from kinder_garten.envs.agents import gripper, ant
+from kinder_garten.envs.agents import gripper
 
 from pybullet_utils import bullet_client
 
@@ -73,9 +73,6 @@ class KinderGarten(gym.Env):
 
         if agent == 'gripper':
             self.agent = gripper.Gripper(self.engine, self.physicsClient, self.reward, debug=True)
-        if agent == 'ant':
-            self.agent = ant.Gripper(
-                self.engine, self.physicsClient, self.reward, debug=True)
         else:
             # load custom class that expects certain format?
             pass
@@ -118,7 +115,6 @@ class KinderGarten(gym.Env):
         terminated = self.scene.isDone()
         # reward = self.reward.compute()
     
-        observation = self.agent.observe()
 
         if self.debug:
             btn_val = p.readUserDebugParameter(self.reset_btn)

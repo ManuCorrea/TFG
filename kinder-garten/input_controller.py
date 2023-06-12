@@ -1,6 +1,7 @@
 from xbox360controller import Xbox360Controller
 import numpy as np
 import time
+import cProfile
 
 controller = Xbox360Controller(axis_threshold=0.2)
 
@@ -31,6 +32,11 @@ def get_box():
     print(data)
     return data
 
+idx = 0
 while True:
     print(get_box())
+    if idx == 200:
+        cProfile.run('get_box()', filename='xbox.dat')
+    idx += 1
+
     time.sleep(0.01)

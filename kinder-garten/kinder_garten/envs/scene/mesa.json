@@ -1,0 +1,32 @@
+[
+    {
+        "file": "plane.urdf",
+        "position": [
+            0,
+            0,
+            0
+        ],
+        "reset": false,
+        "random": false
+    },
+    {
+        "file": "kinder_garten/envs/scene/objects/table/table.urdf",
+        "position": [
+            0,
+            0,
+            1
+        ],
+        "reset": true,
+        "detect_surface": true
+    },
+    {
+        "dir": "kinder_garten/envs/scene/objects/wooden_blocks",
+        "position": [
+            0,
+            0,
+            0.8
+        ],
+        "size": 0.3,
+        "reset": true
+    }
+]

@@ -136,6 +136,7 @@ dmypy.json
 *.png
 *.csv
 *.zip
+*.pkl
 
 kinder-garten/gripper/*
 

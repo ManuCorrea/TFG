@@ -3,8 +3,6 @@ import math
 import numpy as np
 from dataclasses import dataclass
 
-import logging
-
 class OglOps():
     @staticmethod
     def _gl_ortho(left, right, bottom, top, near, far):
@@ -85,7 +83,7 @@ class PyBulletCamera():
     init()
     set
     """
-    def __init__(self, agent, width, height, K, near=0.02, far=2.0, debug=False) -> None:
+    def __init__(self, agent, width, height, K, near=0.02, far=0.2, debug=False) -> None:
         self.width = width
         self.height = height
         self._near = near
@@ -93,17 +91,16 @@ class PyBulletCamera():
         self.view_matrix = None
         self.agent = agent
         self.debug = debug
-        # K = np.array(
-        #     [[69.76, 0.0, 32.19], [0.0, 77.25, 32.0], [0.0, 0.0, 1.0]])
+        K = np.array(
+            [[69.76, 0.0, 32.19], [0.0, 77.25, 32.0], [0.0, 0.0, 1.0]])
 
         # https: // ksimek.github.io/2013/08/13/intrinsic/
-        K = np.array(
-            [[186.400, 0.0, 112.0], [0.0, 206.415, 85.5], [0.0, 0.0, 1.0]]
-        )
+        # K = np.array(
+        #     [[186.400, 0.0, 112.0], [0.0, 206.415, 85.5], [0.0, 0.0, 1.0]]
+        # )
         self.projection_matrix = OglOps._build_projection_matrix(
             height, width, K, near, far) #.flatten(order='F')
-        print('\n\n\n')
-        print(self.projection_matrix)
+
         mult = 1000
         otra = p.computeProjectionMatrix(
             0., width, height, 0., 0.02, 2.)
@@ -114,12 +111,7 @@ class PyBulletCamera():
         #     nearVal=0.1,
         #     farVal=3.1)
 
-        print(otra)
-        print(np.array(otra))
-        print('\n\n\n')
-
-
-        self.init_camera_position()
+        self.init_camera_position([0.0, 0.06, 0.0], [0.6, 0.0, 0.0, 0.06])
 
         self.init_debug()
 
@@ -148,7 +140,6 @@ class PyBulletCamera():
         t_y = data['t_y']
         t_z = data['t_z']
 
-
         # near = p.readUserDebugParameter(self.sliders['near'])
         # far = p.readUserDebugParameter(self.sliders['far'])
         # self.projection_matrix = p.computeProjectionMatrix(
@@ -157,11 +148,7 @@ class PyBulletCamera():
         self.init_camera_position(translation=[t_x, 0.06, t_z], rotation=[0.6,y,z,0.06])
 
 
-    def set_world_position(self):
-        pass
-
-    # Borrar. Creates _h_robot_camera
-    def init_camera_position(self, translation = [0.0, 0.2, 0.05],  rotation = [1.0, -0.1305, 0.0, 0.0], transform=[]):
+    def init_camera_position(self, translation = [0.0, 0.2, 0.06],  rotation = [1.0, -0.1305, 0.0, 0.0], transform=[]):
         "Generates the matrix trasformation for later use as relative to X point"
 
         # rotation = p.getQuaternionFromEuler([0, 1.57, 0])
@@ -193,7 +180,7 @@ class PyBulletCamera():
             lineFrom = [round(point,3) for point in lineFrom]
             lineTo = lineFrom + lineFrom*cam_matrix[:3, 2]
             # logging.debug(f'vec from {lineFrom} to {lineTo}')
-            if self.debug:
+            if debug:
                 p.addUserDebugPoints([cam_pos], [[0.1, 0, 0]],
                                     pointSize=3, lifeTime=0.1)
                 p.addUserDebugLine(lineFrom, lineTo, lifeTime=0.1)
@@ -220,21 +207,28 @@ class PyBulletCamera():
             height=self.height,
             viewMatrix=gl_view_matrix,
             projectionMatrix=gl_projection_matrix,
-            renderer=p.ER_TINY_RENDERER)
+            renderer=p.ER_BULLET_HARDWARE_OPENGL)
 
         # Extract RGB image
         rgb = np.asarray(result[2], dtype=np.uint8)
         rgb = np.reshape(rgb, (self.height, self.width, 4))[:, :, :3]
+        rgb = np.moveaxis(rgb, -1, 0)
         # Extract depth image
-        near, far = self._near, self._far
-        depth_buffer = np.asarray(result[3], np.float32).reshape(
+        depth = np.asarray(result[3]).reshape(
             (self.height, self.width))
-        depth = 1. * far * near / (far - (far - near) * depth_buffer)
 
-        # Extract segmentation mask
-        mask = result[4]
+        depth = (depth*255).astype(np.uint8)
 
-        return rgb, depth, mask
+
+        depth = np.expand_dims(depth, axis=0)
+
+        # # Extract segmentation mask
+        # mask = result[4]
+
+        # print(depth.shape)
+        # plt.imsave('a.jpg', depth_buffer_opengl)
+
+        return rgb, depth, None
 
 
 

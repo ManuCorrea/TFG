@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import numpy  as np
+from random import shuffle
 from kinder_garten.envs.agents.gripper  import Bullet
 import math
 from ...GUI.utils import UserInterface
@@ -46,6 +47,8 @@ class Scene:
         for object in objects_to_load:
             self.load(object)
 
+        self.editor_spawner = None
+        self.editor_spawners = []
             
     def initPyBullet(self):
         import pybullet_data
@@ -175,7 +178,7 @@ class Scene:
                 x1, y1 = pt1
                 x2, y2 = pt2
                 slope = (y2-y1)/(x2-x1)
-                print(f'{pt1} {pt2} m:{slope}')
+                # print(f'{pt1} {pt2} m:{slope}')
 
 
     def resetPyBullet(self):
@@ -187,6 +190,9 @@ class Scene:
 
         for spawner in self.spawners:
             spawner.reset()
+
+        for editor_spawner in self.editor_spawners:
+            editor_spawner.reset()
 
     # TODO how design approach
     def isDone(self):
@@ -223,7 +229,6 @@ class Scene:
             else:
                 orientation = self.client.getQuaternionFromEuler([1.57, 0, 0])
 
-            print(f'----- {angle}')
             magnitude = np.sqrt(vector.dot(vector))
             # magnitude *= 0.5
 
@@ -258,7 +263,9 @@ class Scene:
             id, x1, y1, x2, y2, group = spawn_area
             if id not in self.added_spawn_areas:
                 self.added_spawn_areas.add(id)
-                SpawnRectangle(spawn_area, self.client)
+                self.editor_spawner = SpawnRectangle(spawn_area, self.client, group)
+                self.editor_spawner.spawn()
+                self.editor_spawners.append(self.editor_spawner)
             
 
             # visualShapeId = self.client.createVisualShape(shapeType=self.client.GEOM_MESH,
@@ -339,7 +346,7 @@ class SpawnSquare:
 
 
 class SpawnRectangle:
-    def __init__(self, spawn_area, client, debug=True) -> None:
+    def __init__(self, spawn_area, client, group, max_objs=1, debug=True) -> None:
         _, x1, y1, x2, y2, group = spawn_area
         _, self.x1, self.y1, self.x2, self.y2, self.group = spawn_area
 
@@ -347,16 +354,20 @@ class SpawnRectangle:
         x1, y1, x2, y2 = x1 * scale, y1 * scale, x2 * scale, y2 * scale
         self.x1, self.y1, self.x2, self.y2 = self.x1 * scale, self.y1 * scale, self.x2 * scale, self.y2 * scale
 
-        self.dir = 0
+        group_number = int(group.split(" ")[-1])
+        self.dir = "assets/" + f"g{group_number}"
         position = 0
         self.position = position
         self.client = client
+        self.group
 
-        z = 1
+        z = 0.4
         self.z = z
 
         self.x_lenght = abs(x1-x2)
         self.y_lenght = abs(y1-y2)
+        self.max_objs = max_objs
+        self.loaded_objs = 0
 
         if debug:
             p1 = (x1, y1, z)
@@ -370,22 +381,28 @@ class SpawnRectangle:
 
     def spawn(self):
         self.loaded_objs = set()
-        # if os.path.isdir(self.dir):
-        #     for obj in os.listdir(self.dir):
-        #         if obj.endswith('.urdf'):
-        pos = (self.x1 + self.x_lenght * random.uniform(0, 1),
-                self.y1 + self.y_lenght * random.uniform(0, 1),
-                self.z)
-        id = self.client.loadURDF(
-            "r2d2.urdf", pos, useFixedBase=False)
-        # print(f'Object with id {id}')
-        self.loaded_objs.add(id)
+        if os.path.isdir(self.dir):
+            dir_content = os.listdir(self.dir)
+            shuffle(dir_content)
+            for obj in dir_content:
+                if obj.endswith('.urdf'):
+                    pos = (self.x1 + self.x_lenght * random.uniform(0, 1),
+                            self.y1 + self.y_lenght * random.uniform(0, 1),
+                            self.z)
+                    file_to_load = f'{self.dir}/{obj}'
+                    id = self.client.loadURDF(
+                        file_to_load, pos, useFixedBase=True, globalScaling=0.001)
+                    # print(f'Object with id {id}')
+                    self.loaded_objs.add(id)
+                    
+                    if len(self.loaded_objs) == self.max_objs:
+                        break
+
 
     def reset(self):
-        if self._reset:
-            for obj in self.loaded_objs:
-                # print(f'Remove obj with id {obj}')
-                self.client.removeBody(obj)
-            self.loaded_objs = set()
+        for obj in self.loaded_objs:
+            # print(f'Remove obj with id {obj}')
+            self.client.removeBody(obj)
+        self.loaded_objs = set()
         self.spawn()
 
