@@ -8,11 +8,12 @@ The development process of robotics simulation and Reinforcement Learning is cur
 In order to aid in the process of creating the robotics solutions, KinderGarten was created to provide a set of tools to aid in the development process of robotics simulations and training with Reinforcement Learning.
 
 ## Instalation
+```
 conda create -n kg python=3.7
 conda activate kg
 cd kinder-garten
 python -m pip install -e .
-
+```
 All example scripts are under kinder-garten
 
 ## Editor
