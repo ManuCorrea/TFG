@@ -25,7 +25,7 @@ RL_ALGORITHMS_FUNCTIONS = {
 
 AGENTS_GYM = ["CartPole-v1"]
 
-AGENTS_KG = ["gripper", "Walker"]
+AGENTS_KG = ["gripper"]
 SCENES_KG = ["Plane", "table"]
 
 # Change the label text

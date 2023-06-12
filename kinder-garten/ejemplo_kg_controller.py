@@ -1,30 +1,14 @@
-import pybullet as p
 import time
-import pybullet_data
 import gym
 import numpy as np
-import time
-from threading import Thread
 import time
 
 from kinder_garten.envs.kinder_garten import KinderGarten
 
-# from stable_baselines3 import PPO
-# from stable_baselines3.common.env_util import make_vec_env
-
-import cProfile
 
 from xbox360controller import Xbox360Controller
 
 controller = Xbox360Controller(axis_threshold=0.2)
-
-
-# Parallel environments
-# env = make_vec_env("CartPole-v1", n_envs=4)
-
-# model = PPO("MlpPolicy", env, verbose=1)
-# model.learn(total_timesteps=4e6)
-# model.save("ppo_cartpole")
 
 env = KinderGarten("gripper",  'table', 'pybullet', debug=True)
 # env = KinderGarten("gripper",  'simple', 'pybullet')
@@ -54,8 +38,6 @@ def get_box(show=True):
     else:
         data[4] = tr
     data = np.around(data, 1)
-    # badIndices = (data < 0.2 | data > )
-    # data[badIndices] = 0
 
     if show:
         print(data)
@@ -70,9 +52,6 @@ while True:
         
         action = get_box(False)
 
-        # if idx == 100:
-        #     cProfile.run('env.step(action)', filename='env.dat')
-        
         start = time.time()
         
         observation, reward, terminated, info = env.step(action)

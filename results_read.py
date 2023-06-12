@@ -3,13 +3,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-# fig = plt.figure()
-# ax = fig.add_axes([0, 0, 1, 1])
 modes = []
 fps = []
 bar_colors = []
-
-# TODO create matplotlib table
 
 perf_folder = 'perf'
 subprocess_types = os.listdir(perf_folder)
@@ -49,22 +45,12 @@ for idx, subprocess_type in enumerate(subprocess_types):
 # TODO colorizar por tipo, recortar nombre x para mejkor visualizacion
 
 ind = np.arange(len(modes))
-# plt.xticks(ind, modes)
-# ax.set_xticks(ind)
-# ax.set_xticklabels(modes)
-# ax = fig.add_axes([0, 0, 1, 1])
-print(modes)
-print(bar_labels)
-print(fps)
+
 fig, ax = plt.subplots()
 ax.set_ylabel('Vectorized Environments Types')
 ax.set_ylabel('fps')
 
-# ax.set_ylim(bottom=10)
-# bar_labels = ['red', 'blue', '_red', 'orange']
-ax.bar(modes, fps, color=bar_colors, label=bar_labels)
-
-
+ax.bar(modes, fps, color=bar_colors, label=bar_labels) 
 
 labels = list(colors_proxy.keys())
 handles = [plt.Rectangle((0, 0), 1, 1, color=colors_proxy[label])

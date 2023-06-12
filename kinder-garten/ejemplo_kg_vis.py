@@ -21,26 +21,23 @@ idx = 0
 rewards = []
 while True:
     action = env.agent.action_space.sample()
-    if type(env.agent.action_space) == gym.spaces.box.Box:
         
-        action = env.action_space.sample()
-        
-        start = time.time()
-        
-        observation, reward, terminated, info = env.step(action)
-        end = time.time() - start
-        rewards.append(reward)
+    start = time.time()
+    
+    observation, reward, terminated, info = env.step(action)
+    end = time.time() - start
+    rewards.append(reward)
 
-        cv2.imshow('Frame', observation[0])
+    cv2.imshow('Frame', observation[0])
 
-        # Press Q on keyboard to  exit
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            break
+    # Press Q on keyboard to  exit
+    if cv2.waitKey(25) & 0xFF == ord('q'):
+        break
 
 
-        if terminated:
-            print(f"reward: {sum(rewards)}")
-            rewards = []
+    if terminated:
+        print(f"reward: {sum(rewards)}")
+        rewards = []
 
-        idx += 1
-                
+    idx += 1
+            
