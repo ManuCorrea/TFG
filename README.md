@@ -11,7 +11,7 @@ In order to aid in the process of creating the robotics solutions, KinderGarten 
 conda create -n kg python=3.7
 conda activate kg
 cd kinder-garten
-pip install -e .
+python -m pip install -e .
 
 All example scripts are under kinder-garten
 

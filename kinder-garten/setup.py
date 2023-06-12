@@ -7,4 +7,5 @@ setup(
                       "pybullet",
                       "stable-baselines3[extra]",
                       "scikit-learn "],
+    packages=['kinder_garten'],
 )
