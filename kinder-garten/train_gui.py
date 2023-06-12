@@ -49,6 +49,7 @@ def show():
     
     model = rl_func("MlpPolicy", env, device="cpu")
     model.learn(total_timesteps=25000)
+    model.save("gui_training_result")
   
 # Dropdown menu options
 RL_ALGORITHMS = [
