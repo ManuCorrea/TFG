@@ -43,6 +43,8 @@ python ejemplo_kg_vis_simple.py
 ```
 
 # Controlling the gripper environment with an xbox controller
+For running it in real time (at least in my tested machines) you need to remove the sleep in the _event_loop() in controller.py of the Xbox360Controller class
 ```
+python -m pip install xbox360controller
 python ejemplo_kg_controller.py
 ```
