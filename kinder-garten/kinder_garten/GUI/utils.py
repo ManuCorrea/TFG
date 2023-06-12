@@ -17,7 +17,7 @@ class Spawn:
 
         # all the spawn areas belong to one group
         # it will also have one object or group of objects assigned
-        groups  = [f'Group {i}' for i in range(5)]
+        groups  = [f'Group {i}' for i in range(1, 3)]
         self.group = tk.StringVar()
         self.current_group_combobox = ttk.Combobox(root, width = 27, textvariable = self.group)
         
@@ -26,8 +26,8 @@ class Spawn:
 
         self.current_group_combobox.bind('<<ComboboxSelected>>', self.group_changed)
 
-        self.colours = {group:colour for group, colour in zip(groups, ["white", "black", "red", "green", "blue", "cyan", "yellow"])}
-        self.current_colour = self.colours['Group 0']
+        self.colours = {group:colour for group, colour in zip(groups, ["black", "red", "green", "blue", "cyan", "yellow"])}
+        self.current_colour = self.colours['Group 1']
         self.group_to_folder = {group:f"g{idx}" for group, idx in zip(groups, range(5))}
 
         self.root = root
@@ -116,9 +116,8 @@ class UserInterface:
         mode_choosen = ttk.Combobox(self.root, width = 27, textvariable = self.mode)
         
         # Adding combobox drop down list
-        mode_choosen['values'] = ('Walls', 
-                                'Spawn Areas',
-                                'Groups Spawn Areas')
+        mode_choosen['values'] = ('Walls',
+                                'Spawn Areas')
 
         mode_choosen.pack(padx=5, pady=5)
 
@@ -139,22 +138,6 @@ class UserInterface:
         slider.pack()
         l3.pack()
 
-        langs = ['Java', 'C#', 'C', 'C++', 'Python',
-                'Go', 'JavaScript', 'PHP', 'Swift']
-
-        var = tk.Variable(value=langs)
-
-        listbox = tk.Listbox(
-            self.root,
-            listvariable=var,
-            height=6,
-            selectmode=tk.EXTENDED
-        )
-
-        ################
-
-        # self.canvas.bind('<Motion>', draw_line)
-
         center_x = canvas_width/2
         center_y = canvas_height/2
 
@@ -163,10 +146,6 @@ class UserInterface:
 
         self.canvas.create_line(center_x, center_y, center_x + 40, center_y, fill="#f00")
         self.canvas.create_line(center_x, center_y, center_x, center_y + -40, fill="#0f0")
-
-        # root.bind('<ButtonRelease-1>', reset_coords)
-
-        # root.mainloop()
 
     def update_UI(self):
         self.root.update_idletasks()

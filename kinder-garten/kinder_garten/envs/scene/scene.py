@@ -4,25 +4,9 @@ import os
 import random
 import numpy  as np
 from random import shuffle
-from kinder_garten.envs.agents.gripper  import Bullet
 import math
 from ...GUI.utils import UserInterface
 
-# logging.basicConfig(filename='gripper.log', level=logging.DEBUG,
-#                     format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-#                     datefmt='%Y-%m-%d:%H:%M:%S')
-
-
-# # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
-# red = "\x1b[31;20m"
-# reset = "\x1b[0m"
-
-# logFormatter = logging.Formatter(
-#     red + "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s] [%(filename)s:%(lineno)d] %(message)s"  + reset)
-
-# consoleHandler = logging.StreamHandler()
-# consoleHandler.setFormatter(logFormatter)
-# logging.getLogger().addHandler(consoleHandler)
 
 class Scene:
     def __init__(self, engine, scene, client) -> None:
@@ -94,15 +78,11 @@ class Scene:
         print(f'{rayInfo} len: {len(rayInfo)}')
         self.client.addUserDebugPoints([hit], [[0, 1, 1]], pointSize=10)
 
-        xs = iter(np.linspace(-1, 1, 30))
-        ys = iter(np.linspace(-1, 1, 30))
-
-
         rays_from = []
         rays_to = []
         table_planes = []
         logging.info('generating points')
-        # TODO do surface generation space accorging object
+        # TODO  (not considered for final version) do surface generation space accorging object
         for x in np.linspace(-1, 1, 100):
             for y in np.linspace(-1, 1, 100):
                 rayFrom = (x, y, z+0.1)
@@ -139,13 +119,8 @@ class Scene:
 
                 table_planes.append(pos_table)
 
-        # print(len(table_planes))
-        # print(len([[0, 0, 1]]*len(table_planes)))
-        # print([[0, 0, 1]]*len(table_planes))
 
         logging.info('painting points')
-        # self.client.addUserDebugPoints(
-        #     table_planes, [[0, 0, 1]]*len(table_planes), pointSize=5)
 
         x_min= 10000
         y_min = 10000
@@ -167,19 +142,6 @@ class Scene:
         # self.client.addUserDebugPoints(
         #     [[x_max, y_max, z]], [[0, 0, 0]], pointSize=10)
             
-
-        
-    def form_rectangle(self, pts):
-        # find one of the corners
-        for i in range(len(pts)):
-            pt1 = pts[1]
-            for j in range(i, len(pts)):
-                pt2 = pts[j]
-                x1, y1 = pt1
-                x2, y2 = pt2
-                slope = (y2-y1)/(x2-x1)
-                # print(f'{pt1} {pt2} m:{slope}')
-
 
     def resetPyBullet(self):
         for object in self.objects_to_load:
@@ -239,8 +201,8 @@ class Scene:
             # id = self.client.loadURDF(plane1x1, basePosition=mid_point, baseOrientation=orientation, globalScaling=magnitude)
             meshScale = [1*magnitude, 1, 3]
             shift = [0, -0.02, 0]
-            visualShapeId = self.client.createVisualShape(shapeType=self.client.GEOM_MESH,
-                                                          fileName="/home/yo/Desktop/Desarrollo/TFG/kinder-garten/kinder_garten/envs/scene/objects/plane/a.obj",
+            visual_shape_id = self.client.createVisualShape(shapeType=self.client.GEOM_MESH,
+                                                          fileName="kinder_garten/envs/scene/objects/plane/a.obj",
                                     rgbaColor=[1, 0, 0, 1],
                                     specularColor=[0.4, .4, 0],
                                     visualFramePosition=shift,
@@ -251,7 +213,7 @@ class Scene:
             self.client.createMultiBody(baseMass=0,
                       baseInertialFramePosition=[0, 0, 0],
                     #   baseCollisionShapeIndex=collisionShapeId,
-                      baseVisualShapeIndex=visualShapeId,
+                      baseVisualShapeIndex=visual_shape_id,
                       baseOrientation=orientation,
                       basePosition=mid_point,
                       useMaximalCoordinates=True)
@@ -260,7 +222,7 @@ class Scene:
             self.client.addUserDebugLine(p1, p2, lineColorRGB=[1,1,0], lineWidth=5)
 
         for spawn_area in user_interface.get_spawn_areas():
-            id, x1, y1, x2, y2, group = spawn_area
+            id, _, _, _, _, group = spawn_area
             if id not in self.added_spawn_areas:
                 self.added_spawn_areas.add(id)
                 self.editor_spawner = SpawnRectangle(spawn_area, self.client, group)
@@ -268,35 +230,6 @@ class Scene:
                 self.editor_spawners.append(self.editor_spawner)
             
 
-            # visualShapeId = self.client.createVisualShape(shapeType=self.client.GEOM_MESH,
-            #                                     fileName="/home/yo/Desktop/Desarrollo/TFG/kinder-garten/kinder_garten/envs/scene/objects/plane/a.obj",
-            #             rgbaColor=[1, 0, 0, 1],
-            #             specularColor=[0.4, .4, 0],
-            #             visualFramePosition=shift,
-            #             meshScale=meshScale)
-            
-            # self.client.createMultiBody(baseMass=0,
-            #           baseInertialFramePosition=[0, 0, 0],
-            #         #   baseCollisionShapeIndex=collisionShapeId,
-            #           baseVisualShapeIndex=visualShapeId,
-            #           baseOrientation=orientation,
-            #           basePosition=mid_point,
-            #           useMaximalCoordinates=True)
-            
-            """
-            self.dir = obj['dir']
-            position = obj['position']
-            self.position = position
-            size = obj['size']
-            self._reset = obj['reset']
-            self.client = client
-
-            size /= 2
-            self.size = size
-            """
-
-
-        # TODO add spawning area processing
 
 class SpawnSquare:
     def __init__(self, obj, client, debug=True) -> None:

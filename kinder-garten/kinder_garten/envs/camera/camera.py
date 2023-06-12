@@ -1,7 +1,7 @@
-import pybullet as p
 import math
-import numpy as np
 from dataclasses import dataclass
+import pybullet as p
+import numpy as np
 
 class OglOps():
     @staticmethod
@@ -28,6 +28,7 @@ class OglOps():
         ortho = OglOps._gl_ortho(0., width, height, 0., near, far)
         return np.matmul(ortho, perspective)
 
+    @staticmethod
     def quaternion_matrix(quaternion):
         """Return homogeneous rotation matrix from quaternion.
 
@@ -54,7 +55,7 @@ class OglOps():
         ), dtype=np.float64)
     
     @staticmethod
-    def from_pose(translation, rotation, invert=False):
+    def from_pose(translation, rotation):
         """Create a transform from a translation vector and quaternion.
 
         Args:
@@ -94,22 +95,9 @@ class PyBulletCamera():
         K = np.array(
             [[69.76, 0.0, 32.19], [0.0, 77.25, 32.0], [0.0, 0.0, 1.0]])
 
-        # https: // ksimek.github.io/2013/08/13/intrinsic/
-        # K = np.array(
-        #     [[186.400, 0.0, 112.0], [0.0, 206.415, 85.5], [0.0, 0.0, 1.0]]
-        # )
+
         self.projection_matrix = OglOps._build_projection_matrix(
             height, width, K, near, far) #.flatten(order='F')
-
-        mult = 1000
-        otra = p.computeProjectionMatrix(
-            0., width, height, 0., 0.02, 2.)
-
-        # self.projectionMatrix = p.computeProjectionMatrixFOV(
-        #     fov=45.0,
-        #     aspect=width/height,
-        #     nearVal=0.1,
-        #     farVal=3.1)
 
         self.init_camera_position([0.0, 0.06, 0.0], [0.6, 0.0, 0.0, 0.06])
 
